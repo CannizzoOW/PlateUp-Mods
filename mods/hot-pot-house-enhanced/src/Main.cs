@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.9",
+            "2.4.10",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.9 loaded; providers, pot racks, dish storage, item displays and shared-pot serving visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.10 loaded; providers, numeric side-dish stock, pot racks, dish storage and shared-pot visuals are enhanced.");
     }
 }
 
@@ -127,6 +127,8 @@ internal static class UseVanillaProviderPrefabs
 
                 if (usePotRack)
                     HideVisualRenderers(replacement);
+                else if (usePlateStack)
+                    ConfigureNumericSideDishRack(replacement);
                 else if (!useCounter && !usePlateStack)
                     RemoveVanillaIngredientModels(replacement);
                 if (ingredientModel != null)
@@ -341,6 +343,31 @@ internal static class UseVanillaProviderPrefabs
             renderer.enabled = false;
     }
 
+    private static void ConfigureNumericSideDishRack(GameObject appliance)
+    {
+        LimitedItemSourceView sourceView = appliance.GetComponentInChildren<LimitedItemSourceView>(true);
+        if (sourceView == null)
+        {
+            Debug.LogWarning("[Hot Pot House Enhanced] Side-dish rack has no LimitedItemSourceView; visible dishes could not be replaced with a number.");
+            return;
+        }
+
+        List<GameObject> displayedDishes = AccessTools.Field(typeof(LimitedItemSourceView), "Items")
+            ?.GetValue(sourceView) as List<GameObject>;
+        if (displayedDishes != null)
+            foreach (GameObject displayedDish in displayedDishes)
+                if (displayedDish != null)
+                    foreach (Renderer renderer in displayedDish.GetComponentsInChildren<Renderer>(true))
+                        renderer.enabled = false;
+
+        GameObject numberRoot = new GameObject("Side Dish Stock Number");
+        numberRoot.transform.SetParent(appliance.transform, false);
+        numberRoot.transform.localPosition = new Vector3(0f, 1.08f, 0f);
+        SideDishCountDisplay display = numberRoot.AddComponent<SideDishCountDisplay>();
+        display.CreateLabels();
+        appliance.AddComponent<SideDishRackMarker>().Display = display;
+    }
+
     private static void FitModelToApplianceHeight(GameObject model, GameObject reference, float heightMultiplier)
     {
         Renderer[] modelRenderers = model.GetComponentsInChildren<Renderer>(true);
@@ -401,6 +428,65 @@ internal static class UseVanillaProviderPrefabs
                 renderer.gameObject.SetActive(false);
             }
         }
+    }
+}
+
+internal sealed class SideDishCountDisplay : MonoBehaviour
+{
+    private TextMesh label;
+    private TextMesh shadow;
+
+    internal void CreateLabels()
+    {
+        shadow = CreateText("Shadow", Color.black, new Vector3(0.018f, -0.018f, 0.01f));
+        label = CreateText("Number", Color.white, Vector3.zero);
+        SetAmount(8);
+    }
+
+    internal void SetAmount(int amount)
+    {
+        string value = Mathf.Max(0, amount).ToString();
+        if (label != null)
+            label.text = value;
+        if (shadow != null)
+            shadow.text = value;
+    }
+
+    private TextMesh CreateText(string objectName, Color color, Vector3 localPosition)
+    {
+        GameObject child = new GameObject(objectName);
+        child.transform.SetParent(transform, false);
+        child.transform.localPosition = localPosition;
+        TextMesh text = child.AddComponent<TextMesh>();
+        text.anchor = TextAnchor.MiddleCenter;
+        text.alignment = TextAlignment.Center;
+        text.fontSize = 80;
+        text.characterSize = 0.0125f;
+        text.color = color;
+        return text;
+    }
+
+    private void LateUpdate()
+    {
+        Camera camera = Camera.main;
+        if (camera != null)
+            transform.rotation = camera.transform.rotation;
+    }
+}
+
+internal sealed class SideDishRackMarker : MonoBehaviour
+{
+    internal SideDishCountDisplay Display;
+}
+
+[HarmonyPatch(typeof(LimitedItemSourceView), "UpdateData")]
+internal static class NumericSideDishStockPatch
+{
+    private static void Postfix(LimitedItemSourceView __instance, LimitedItemSourceView.ViewData __0)
+    {
+        SideDishRackMarker marker = __instance.GetComponentInParent<SideDishRackMarker>();
+        if (marker?.Display != null)
+            marker.Display.SetAmount(__0.Amount);
     }
 }
 

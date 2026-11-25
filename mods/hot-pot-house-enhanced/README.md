@@ -1,6 +1,6 @@
 # Hot Pot House Enhanced
 
-Version 2.4.9.
+Version 2.4.10.
 
 - Uses vanilla counters for regular Hot Pot House providers, refrigerators for cold providers, and the vanilla plate stack for side dishes.
 - Displays the correct Hot Pot House ingredients.
