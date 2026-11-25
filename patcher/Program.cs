@@ -36,7 +36,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Cannizzo ModPatcher";
+        Text = "Cannizzo ModPatcher 1.0";
         ClientSize = new Size(760, 570);
         MinimumSize = new Size(650, 480);
         StartPosition = FormStartPosition.CenterScreen;
@@ -44,7 +44,7 @@ internal sealed class MainForm : Form
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 10F);
 
-        var title = new Label { Text = "Cannizzo ModPatcher", Font = new Font("Segoe UI Semibold", 20F), AutoSize = true };
+        var title = new Label { Text = "Cannizzo ModPatcher 1.0", Font = new Font("Segoe UI Semibold", 20F), AutoSize = true };
         var subtitle = new Label { Text = "Downloads verified PlateUp mods from GitHub", AutoSize = true, ForeColor = Color.Gainsboro };
         var findButton = new Button { Text = "Find PlateUp", AutoSize = true };
         var browseButton = new Button { Text = "Choose game folder...", AutoSize = true };
@@ -99,7 +99,7 @@ internal sealed class MainForm : Form
     private static HttpClient CreateHttpClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Cannizzo-ModPatcher/1.1.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Cannizzo-ModPatcher/1.0");
         return client;
     }
 

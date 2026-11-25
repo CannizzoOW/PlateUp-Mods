@@ -1,5 +1,7 @@
 # Cannizzo ModPatcher
 
+Current release: 1.0.
+
 GitHub-backed local installer while Workshop releases await moderation.
 
 The patcher installs:
