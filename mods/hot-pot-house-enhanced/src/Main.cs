@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.8",
+            "2.4.9",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.8 loaded; providers, dish storage, item displays and shared-pot serving visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.9 loaded; providers, pot racks, dish storage, item displays and shared-pot serving visuals are enhanced.");
     }
 }
 
@@ -64,11 +64,20 @@ internal static class UseVanillaProviderPrefabs
         Appliance vanillaRefrigerator = data.Get<Appliance>(ApplianceReferences.SourceMeat);
         Appliance vanillaCounter = data.Get<Appliance>(ApplianceReferences.Countertop);
         Appliance vanillaPlateStack = data.Get<Appliance>(ApplianceReferences.PlateStack);
-        if (vanillaRefrigerator?.Prefab == null || vanillaCounter?.Prefab == null || vanillaPlateStack?.Prefab == null)
+        Appliance vanillaPotStack = data.Get<Appliance>(ApplianceReferences.PotStack);
+        Appliance hotPotWasher = data.Get<Appliance>().FirstOrDefault(appliance =>
+            appliance != null && appliance.name.EndsWith(" - pot_washer", StringComparison.OrdinalIgnoreCase));
+        Transform hotPotRackModel = hotPotWasher?.Prefab == null
+            ? null
+            : FindDescendant(hotPotWasher.Prefab.transform, "HPH Model");
+        if (vanillaRefrigerator?.Prefab == null || vanillaCounter?.Prefab == null ||
+            vanillaPlateStack?.Prefab == null || vanillaPotStack?.Prefab == null)
         {
-            Debug.LogWarning("[Hot Pot House Enhanced] A required vanilla counter, refrigerator, or plate-stack prefab was unavailable during GameData build.");
+            Debug.LogWarning("[Hot Pot House Enhanced] A required vanilla counter, refrigerator, plate-stack, or pot-stack prefab was unavailable during GameData build.");
             return;
         }
+        if (hotPotRackModel == null)
+            Debug.LogWarning("[Hot Pot House Enhanced] The Hot Pot House pot-rack model was unavailable; Small Hot Pots will keep the counter fallback.");
 
         int replaced = 0;
         foreach (Appliance gdo in data.Get<Appliance>())
@@ -86,16 +95,24 @@ internal static class UseVanillaProviderPrefabs
                 string uniqueName = gdo.name.Substring("hotpothouse - ".Length);
                 bool useRefrigerator = RefrigeratorProviders.Contains(uniqueName);
                 bool usePlateStack = string.Equals(uniqueName, "side_dish_stack", StringComparison.OrdinalIgnoreCase);
-                bool useCounter = !useRefrigerator && !usePlateStack;
+                bool usePotRack = hotPotRackModel != null &&
+                    string.Equals(uniqueName, "hot_pot_stack", StringComparison.OrdinalIgnoreCase);
+                bool useCounter = !useRefrigerator && !usePlateStack && !usePotRack;
                 GameObject source = usePlateStack
                     ? vanillaPlateStack.Prefab
+                    : usePotRack
+                        ? vanillaPotStack.Prefab
                     : useCounter
                         ? vanillaCounter.Prefab
                         : vanillaRefrigerator.Prefab;
                 Transform hotPotDisplay = gdo.Prefab.transform.Find("Display");
-                GameObject ingredientModel = usePlateStack ? null : CreateSoupsPlusDisplay(data, uniqueName);
+                GameObject ingredientModel = usePlateStack
+                    ? null
+                    : usePotRack
+                        ? UnityEngine.Object.Instantiate(hotPotRackModel.gameObject)
+                        : CreateSoupsPlusDisplay(data, uniqueName);
                 bool usesSoupsPlusDisplay = ingredientModel != null;
-                if (!usePlateStack && ingredientModel == null && hotPotDisplay != null)
+                if (!usePlateStack && !usePotRack && ingredientModel == null && hotPotDisplay != null)
                     ingredientModel = UnityEngine.Object.Instantiate(hotPotDisplay.gameObject);
                 Transform prefabHolder = gdo.Prefab.transform.parent;
                 GameObject replacement = UnityEngine.Object.Instantiate(source);
@@ -108,7 +125,9 @@ internal static class UseVanillaProviderPrefabs
                 replacement.transform.localRotation = source.transform.localRotation;
                 replacement.transform.localScale = source.transform.localScale;
 
-                if (!useCounter && !usePlateStack)
+                if (usePotRack)
+                    HideVisualRenderers(replacement);
+                else if (!useCounter && !usePlateStack)
                     RemoveVanillaIngredientModels(replacement);
                 if (ingredientModel != null)
                 {
@@ -121,7 +140,11 @@ internal static class UseVanillaProviderPrefabs
                             : new Vector3(0f, 0.52f, 0f);
                     if (!usesSoupsPlusDisplay)
                         ingredientModel.transform.localRotation = Quaternion.identity;
-                    if (useCounter)
+                    if (usePotRack)
+                    {
+                        FitModelToApplianceHeight(ingredientModel, source, 1f);
+                    }
+                    else if (useCounter)
                     {
                         if (string.Equals(uniqueName, "family_pot_stack", StringComparison.OrdinalIgnoreCase))
                             ingredientModel.transform.localScale *= 1.3f;
@@ -136,7 +159,7 @@ internal static class UseVanillaProviderPrefabs
                 gdo.Prefab = replacement;
                 replaced++;
 
-                string replacementType = usePlateStack ? "plate stack" : useCounter ? "counter" : "refrigerator";
+                string replacementType = usePlateStack ? "plate stack" : usePotRack ? "pot rack" : useCounter ? "counter" : "refrigerator";
                 Debug.Log($"[Hot Pot House Order Cleanup] Replaced {gdo.name} with vanilla {replacementType} prefab.");
             }
             catch (Exception ex)
@@ -310,6 +333,37 @@ internal static class UseVanillaProviderPrefabs
         for (int index = 1; index < renderers.Length; index++)
             bounds.Encapsulate(renderers[index].bounds);
         model.transform.localPosition += new Vector3(-bounds.center.x, surfaceY - bounds.min.y, -bounds.center.z);
+    }
+
+    private static void HideVisualRenderers(GameObject appliance)
+    {
+        foreach (Renderer renderer in appliance.GetComponentsInChildren<Renderer>(true))
+            renderer.enabled = false;
+    }
+
+    private static void FitModelToApplianceHeight(GameObject model, GameObject reference, float heightMultiplier)
+    {
+        Renderer[] modelRenderers = model.GetComponentsInChildren<Renderer>(true);
+        Renderer[] referenceRenderers = reference.GetComponentsInChildren<Renderer>(true);
+        if (modelRenderers.Length == 0 || referenceRenderers.Length == 0)
+            return;
+
+        Bounds modelBounds = modelRenderers[0].bounds;
+        for (int index = 1; index < modelRenderers.Length; index++)
+            modelBounds.Encapsulate(modelRenderers[index].bounds);
+        Bounds referenceBounds = referenceRenderers[0].bounds;
+        for (int index = 1; index < referenceRenderers.Length; index++)
+            referenceBounds.Encapsulate(referenceRenderers[index].bounds);
+
+        if (modelBounds.size.y > 0.0001f)
+            model.transform.localScale *= referenceBounds.size.y * heightMultiplier / modelBounds.size.y;
+
+        modelBounds = modelRenderers[0].bounds;
+        for (int index = 1; index < modelRenderers.Length; index++)
+            modelBounds.Encapsulate(modelRenderers[index].bounds);
+        Vector3 localBottomCentre = reference.transform.InverseTransformPoint(
+            new Vector3(modelBounds.center.x, modelBounds.min.y, modelBounds.center.z));
+        model.transform.localPosition -= new Vector3(localBottomCentre.x, localBottomCentre.y, localBottomCentre.z);
     }
 
     private static float GetSurfaceHeight(GameObject appliance, float fallback)
