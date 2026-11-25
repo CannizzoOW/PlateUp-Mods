@@ -38,7 +38,7 @@ internal sealed class MainForm : Form
         new("Hot Pot House Enhanced", "HotPotHouseEnhanced", "HotPotHouseEnhanced.dll",
             "CannizzoModPatcher.Payload.HotPotHouseEnhanced.dll", "2.4.5"),
         new("Hot Pot House Colorblind+ Compatibility", "HotPotHouseColorblindPlus", "HotPotHouseColorblindPlus.dll",
-            "CannizzoModPatcher.Payload.HotPotHouseColorblindPlus.dll", "1.0.1")
+            "CannizzoModPatcher.Payload.HotPotHouseColorblindPlus.dll", "1.0.2")
     };
 
     public MainForm()

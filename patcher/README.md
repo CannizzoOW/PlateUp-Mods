@@ -5,7 +5,7 @@ Temporary local installer while the Workshop releases await moderation.
 The patcher installs:
 
 - Hot Pot House Enhanced 2.4.5
-- Hot Pot House Colorblind+ Compatibility 1.0.1
+- Hot Pot House Colorblind+ Compatibility 1.0.2
 
 It finds Steam libraries through the Windows registry and `libraryfolders.vdf`, then installs both embedded DLLs into PlateUp's local `Mods` directory. It can also remove only the copies it installed.
 

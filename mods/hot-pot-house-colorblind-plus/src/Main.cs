@@ -20,7 +20,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.0.1",
+        "1.0.2",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -28,7 +28,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.0.1 loaded.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.0.2 loaded.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -85,13 +85,13 @@ internal static class CollapseDuplicateSharedPotOrdersPatch
     private static readonly List<PotClaim> Claims = new List<PotClaim>();
     private static HashSet<int> SharedFamilyPotIds;
 
-    private static void Prefix(ItemCollectionView __instance, ref ItemCollectionView.ViewData viewData)
+    private static void Prefix(ItemCollectionView __instance, ref ItemCollectionView.ViewData view_data)
     {
         if (!Main.IsColorblindPlusLoaded())
             return;
 
         Claims.RemoveAll(claim => claim.Owner == null || ReferenceEquals(claim.Owner, __instance));
-        List<ItemCollectionView.ItemData> items = viewData.Items;
+        List<ItemCollectionView.ItemData> items = view_data.Items;
         if (items == null || items.Count == 0)
             return;
 
@@ -112,7 +112,7 @@ internal static class CollapseDuplicateSharedPotOrdersPatch
         }
 
         if (filtered.Count != items.Count)
-            viewData.Items = filtered;
+            view_data.Items = filtered;
     }
 
     private static bool IsSameSharedOrder(ItemCollectionView.ItemData existing, ItemCollectionView.ItemData candidate)
