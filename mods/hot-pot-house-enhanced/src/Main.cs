@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.7",
+            "2.4.8",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.7 loaded; providers, item displays and shared-pot serving visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.8 loaded; providers, dish storage, item displays and shared-pot serving visuals are enhanced.");
     }
 }
 
@@ -58,6 +58,8 @@ internal static class UseVanillaProviderPrefabs
     {
         if (data == null)
             return;
+
+        ConfigureSideDishStorage(data);
 
         Appliance vanillaRefrigerator = data.Get<Appliance>(ApplianceReferences.SourceMeat);
         Appliance vanillaCounter = data.Get<Appliance>(ApplianceReferences.Countertop);
@@ -146,6 +148,26 @@ internal static class UseVanillaProviderPrefabs
         Debug.Log($"[Hot Pot House Order Cleanup] Replaced {replaced} Hot Pot House provider prefabs during GameData build.");
         ReplaceMalaPickupModel(data);
         CacheCompletedSoupBowl(data);
+    }
+
+    private static void ConfigureSideDishStorage(GameData data)
+    {
+        Item cleanSideDish = data.Get<Item>().FirstOrDefault(item =>
+            item != null && item.name.EndsWith(" - side_dish", StringComparison.OrdinalIgnoreCase));
+        Item dirtySideDish = data.Get<Item>().FirstOrDefault(item =>
+            item != null && item.name.EndsWith(" - dirty_side_dish", StringComparison.OrdinalIgnoreCase));
+
+        if (cleanSideDish == null || dirtySideDish == null)
+        {
+            Debug.LogWarning("[Hot Pot House Enhanced] Could not apply vanilla dish-storage flags because one or both Hot Pot House side-dish items were unavailable.");
+            return;
+        }
+
+        // Vanilla sinks, washbasins and dishwashers use these flags to place each
+        // dish in their serialized storage slots and update the visible count.
+        cleanSideDish.ItemStorageFlags = ItemStorage.Dish;
+        dirtySideDish.ItemStorageFlags = ItemStorage.DirtyDish;
+        Debug.Log("[Hot Pot House Enhanced] Side dishes now use vanilla clean/dirty dish storage and appliance count visuals.");
     }
 
     private static void CacheCompletedSoupBowl(GameData data)
