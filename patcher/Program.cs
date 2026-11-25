@@ -100,6 +100,12 @@ internal sealed class MainForm : Form
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Cannizzo-ModPatcher/1.0");
+        client.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue
+        {
+            NoCache = true,
+            NoStore = true
+        };
+        client.DefaultRequestHeaders.Pragma.ParseAdd("no-cache");
         return client;
     }
 
@@ -154,7 +160,10 @@ internal sealed class MainForm : Form
         try
         {
             Log("Checking GitHub for available mods...");
-            string json = await Http.GetStringAsync(ManifestUrl + "?t=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            string requestUrl = ManifestUrl + "?request=" + Guid.NewGuid().ToString("N");
+            using HttpResponseMessage response = await Http.GetAsync(requestUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            string json = await response.Content.ReadAsStringAsync();
             ModManifest? loaded = JsonSerializer.Deserialize<ModManifest>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (loaded?.SchemaVersion != 1 || loaded.Mods == null)
                 throw new InvalidDataException("GitHub returned an unsupported mod manifest.");
@@ -162,7 +171,8 @@ internal sealed class MainForm : Form
             manifest = loaded;
             modList.Items.Clear();
             foreach (ModDefinition mod in loaded.Mods) modList.Items.Add(mod, true);
-            Log($"Found {loaded.Mods.Count} mod(s) on GitHub.");
+            Log($"Found {loaded.Mods.Count} mod(s) on GitHub: " +
+                string.Join(", ", loaded.Mods.Select(mod => $"{mod.Name} {mod.Version}")));
         }
         catch (Exception ex)
         {
