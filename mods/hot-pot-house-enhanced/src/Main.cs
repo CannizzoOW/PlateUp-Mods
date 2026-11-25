@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.10",
+            "2.4.11",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.10 loaded; providers, numeric side-dish stock, pot racks, dish storage and shared-pot visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.11 loaded; providers, numeric side-dish stock, pot racks, dish storage and shared-pot visuals are enhanced.");
     }
 }
 
@@ -486,7 +486,15 @@ internal static class NumericSideDishStockPatch
     {
         SideDishRackMarker marker = __instance.GetComponentInParent<SideDishRackMarker>();
         if (marker?.Display != null)
+        {
+            List<GameObject> displayedDishes = AccessTools.Field(typeof(LimitedItemSourceView), "Items")
+                ?.GetValue(__instance) as List<GameObject>;
+            if (displayedDishes != null)
+                foreach (GameObject displayedDish in displayedDishes)
+                    if (displayedDish != null)
+                        displayedDish.SetActive(false);
             marker.Display.SetAmount(__0.Amount);
+        }
     }
 }
 
