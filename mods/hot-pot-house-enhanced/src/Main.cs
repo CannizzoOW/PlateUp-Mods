@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.6",
+            "2.4.7",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.6 loaded; providers, item displays and shared-pot serving visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.7 loaded; providers, item displays and shared-pot serving visuals are enhanced.");
     }
 }
 
@@ -54,28 +54,17 @@ internal static class UseVanillaProviderPrefabs
         "tripe_provider"
     };
 
-    private static readonly HashSet<string> CounterProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "family_pot_stack",
-        "mala_block_provider",
-        "enoki_provider",
-        "tofu_provider",
-        "wood_ear_provider"
-    };
-
     internal static void Apply(GameData data)
     {
         if (data == null)
             return;
 
-        Appliance vanillaCrate = data.Get<Appliance>(ApplianceReferences.SourceOnion);
         Appliance vanillaRefrigerator = data.Get<Appliance>(ApplianceReferences.SourceMeat);
         Appliance vanillaCounter = data.Get<Appliance>(ApplianceReferences.Countertop);
         Appliance vanillaPlateStack = data.Get<Appliance>(ApplianceReferences.PlateStack);
-        if (vanillaCrate?.Prefab == null || vanillaRefrigerator?.Prefab == null ||
-            vanillaCounter?.Prefab == null || vanillaPlateStack?.Prefab == null)
+        if (vanillaRefrigerator?.Prefab == null || vanillaCounter?.Prefab == null || vanillaPlateStack?.Prefab == null)
         {
-            Debug.LogWarning("[Hot Pot House Order Cleanup] Vanilla crate or refrigerator prefab was unavailable during GameData build.");
+            Debug.LogWarning("[Hot Pot House Enhanced] A required vanilla counter, refrigerator, or plate-stack prefab was unavailable during GameData build.");
             return;
         }
 
@@ -94,13 +83,13 @@ internal static class UseVanillaProviderPrefabs
 
                 string uniqueName = gdo.name.Substring("hotpothouse - ".Length);
                 bool useRefrigerator = RefrigeratorProviders.Contains(uniqueName);
-                bool useCounter = CounterProviders.Contains(uniqueName);
                 bool usePlateStack = string.Equals(uniqueName, "side_dish_stack", StringComparison.OrdinalIgnoreCase);
+                bool useCounter = !useRefrigerator && !usePlateStack;
                 GameObject source = usePlateStack
                     ? vanillaPlateStack.Prefab
                     : useCounter
                         ? vanillaCounter.Prefab
-                        : useRefrigerator ? vanillaRefrigerator.Prefab : vanillaCrate.Prefab;
+                        : vanillaRefrigerator.Prefab;
                 Transform hotPotDisplay = gdo.Prefab.transform.Find("Display");
                 GameObject ingredientModel = usePlateStack ? null : CreateSoupsPlusDisplay(data, uniqueName);
                 bool usesSoupsPlusDisplay = ingredientModel != null;
@@ -145,7 +134,7 @@ internal static class UseVanillaProviderPrefabs
                 gdo.Prefab = replacement;
                 replaced++;
 
-                string replacementType = usePlateStack ? "plate stack" : useCounter ? "counter" : useRefrigerator ? "refrigerator" : "crate";
+                string replacementType = usePlateStack ? "plate stack" : useCounter ? "counter" : "refrigerator";
                 Debug.Log($"[Hot Pot House Order Cleanup] Replaced {gdo.name} with vanilla {replacementType} prefab.");
             }
             catch (Exception ex)

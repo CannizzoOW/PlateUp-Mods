@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Cannizzo ModPatcher</AssemblyName>
     <RootNamespace>CannizzoModPatcher</RootNamespace>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>Cannizzo</Authors>
     <Product>Cannizzo ModPatcher</Product>
   </PropertyGroup>
