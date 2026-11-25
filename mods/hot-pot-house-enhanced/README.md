@@ -1,6 +1,6 @@
 # Hot Pot House Enhanced
 
-Version 2.4.5.
+Version 2.4.6.
 
 - Uses vanilla refrigerator, crate, and counter displays for Hot Pot House providers.
 - Displays the correct Hot Pot House ingredients.

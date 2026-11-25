@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.5",
+            "2.4.6",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.5 loaded; providers, item displays and shared-pot serving visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.6 loaded; providers, item displays and shared-pot serving visuals are enhanced.");
     }
 }
 
@@ -59,7 +59,8 @@ internal static class UseVanillaProviderPrefabs
         "family_pot_stack",
         "mala_block_provider",
         "enoki_provider",
-        "tofu_provider"
+        "tofu_provider",
+        "wood_ear_provider"
     };
 
     internal static void Apply(GameData data)
@@ -70,7 +71,9 @@ internal static class UseVanillaProviderPrefabs
         Appliance vanillaCrate = data.Get<Appliance>(ApplianceReferences.SourceOnion);
         Appliance vanillaRefrigerator = data.Get<Appliance>(ApplianceReferences.SourceMeat);
         Appliance vanillaCounter = data.Get<Appliance>(ApplianceReferences.Countertop);
-        if (vanillaCrate?.Prefab == null || vanillaRefrigerator?.Prefab == null || vanillaCounter?.Prefab == null)
+        Appliance vanillaPlateStack = data.Get<Appliance>(ApplianceReferences.PlateStack);
+        if (vanillaCrate?.Prefab == null || vanillaRefrigerator?.Prefab == null ||
+            vanillaCounter?.Prefab == null || vanillaPlateStack?.Prefab == null)
         {
             Debug.LogWarning("[Hot Pot House Order Cleanup] Vanilla crate or refrigerator prefab was unavailable during GameData build.");
             return;
@@ -92,13 +95,16 @@ internal static class UseVanillaProviderPrefabs
                 string uniqueName = gdo.name.Substring("hotpothouse - ".Length);
                 bool useRefrigerator = RefrigeratorProviders.Contains(uniqueName);
                 bool useCounter = CounterProviders.Contains(uniqueName);
-                GameObject source = useCounter
-                    ? vanillaCounter.Prefab
-                    : useRefrigerator ? vanillaRefrigerator.Prefab : vanillaCrate.Prefab;
+                bool usePlateStack = string.Equals(uniqueName, "side_dish_stack", StringComparison.OrdinalIgnoreCase);
+                GameObject source = usePlateStack
+                    ? vanillaPlateStack.Prefab
+                    : useCounter
+                        ? vanillaCounter.Prefab
+                        : useRefrigerator ? vanillaRefrigerator.Prefab : vanillaCrate.Prefab;
                 Transform hotPotDisplay = gdo.Prefab.transform.Find("Display");
-                GameObject ingredientModel = CreateSoupsPlusDisplay(data, uniqueName);
+                GameObject ingredientModel = usePlateStack ? null : CreateSoupsPlusDisplay(data, uniqueName);
                 bool usesSoupsPlusDisplay = ingredientModel != null;
-                if (ingredientModel == null && hotPotDisplay != null)
+                if (!usePlateStack && ingredientModel == null && hotPotDisplay != null)
                     ingredientModel = UnityEngine.Object.Instantiate(hotPotDisplay.gameObject);
                 Transform prefabHolder = gdo.Prefab.transform.parent;
                 GameObject replacement = UnityEngine.Object.Instantiate(source);
@@ -111,7 +117,7 @@ internal static class UseVanillaProviderPrefabs
                 replacement.transform.localRotation = source.transform.localRotation;
                 replacement.transform.localScale = source.transform.localScale;
 
-                if (!useCounter)
+                if (!useCounter && !usePlateStack)
                     RemoveVanillaIngredientModels(replacement);
                 if (ingredientModel != null)
                 {
@@ -139,7 +145,7 @@ internal static class UseVanillaProviderPrefabs
                 gdo.Prefab = replacement;
                 replaced++;
 
-                string replacementType = useCounter ? "counter with one pot" : useRefrigerator ? "refrigerator" : "crate";
+                string replacementType = usePlateStack ? "plate stack" : useCounter ? "counter" : useRefrigerator ? "refrigerator" : "crate";
                 Debug.Log($"[Hot Pot House Order Cleanup] Replaced {gdo.name} with vanilla {replacementType} prefab.");
             }
             catch (Exception ex)

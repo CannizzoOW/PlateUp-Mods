@@ -36,7 +36,7 @@ internal sealed class MainForm : Form
     private static readonly Payload[] Payloads =
     {
         new("Hot Pot House Enhanced", "HotPotHouseEnhanced", "HotPotHouseEnhanced.dll",
-            "CannizzoModPatcher.Payload.HotPotHouseEnhanced.dll", "2.4.5"),
+            "CannizzoModPatcher.Payload.HotPotHouseEnhanced.dll", "2.4.6"),
         new("Hot Pot House Colorblind+ Compatibility", "HotPotHouseColorblindPlus", "HotPotHouseColorblindPlus.dll",
             "CannizzoModPatcher.Payload.HotPotHouseColorblindPlus.dll", "1.0.2")
     };
