@@ -24,6 +24,6 @@ These compatibility mods do not redistribute Hot Pot House, Colorblind+, Soups P
 
 ## Cannizzo ModPatcher
 
-Cannizzo ModPatcher finds the local PlateUp installation and installs or removes the supported local mods. Its source is available in [`patcher`](patcher/).
+Cannizzo ModPatcher finds PlateUp from Steam even when no `Mods` directory exists, creates it when needed, and retrieves the current mod catalog and verified DLLs from this repository. Its source is available in [`patcher`](patcher/).
 
 Download the ready-to-run Windows build from the [latest release](https://github.com/CannizzoOW/PlateUp-Mods/releases/latest).

@@ -7,12 +7,8 @@
     <Nullable>enable</Nullable>
     <AssemblyName>Cannizzo ModPatcher</AssemblyName>
     <RootNamespace>CannizzoModPatcher</RootNamespace>
-    <Version>1.0.3</Version>
+    <Version>1.1.0</Version>
     <Authors>Cannizzo</Authors>
     <Product>Cannizzo ModPatcher</Product>
   </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Payload\HotPotHouseEnhanced.dll" LogicalName="CannizzoModPatcher.Payload.HotPotHouseEnhanced.dll" />
-    <EmbeddedResource Include="Payload\HotPotHouseColorblindPlus.dll" LogicalName="CannizzoModPatcher.Payload.HotPotHouseColorblindPlus.dll" />
-  </ItemGroup>
 </Project>
