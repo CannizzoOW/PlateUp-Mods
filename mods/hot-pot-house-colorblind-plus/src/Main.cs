@@ -34,7 +34,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.3.3",
+        "1.3.4",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -69,7 +69,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.3 loaded with robust dirty-side-dish detection and source-level label suppression.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.4 loaded with HPH and Colorblind+ dirty-side-dish suppression.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -85,6 +85,11 @@ public sealed class Main : BaseMod
 
     internal static bool ShouldHideHotPotHouseLabel(string content, bool isProvider)
     {
+        if (!isProvider &&
+            (string.Equals(content, "Dirty", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(content, "Dirty Side Dish", StringComparison.OrdinalIgnoreCase)))
+            return Hide(HideColorblindDirtySideDishLabel);
+
         if (isProvider)
         {
             if (string.Equals(content, "Side Dishes", StringComparison.OrdinalIgnoreCase))
