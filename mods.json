@@ -30,6 +30,23 @@
         "2911150641",
         "3810492290"
       ]
+    },
+    {
+      "id": "hot-pot-house-countup-compat",
+      "name": "Hot Pot House - CountUp! Compatibility",
+      "version": "1.0.0",
+      "folder": "HotPotHouseCountUpCompat",
+      "fileName": "HotPotHouseCountUpCompat.dll",
+      "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-countup-compat/dist/HotPotHouseCountUpCompat.dll",
+      "sha256": "6e2a18a5b1faed32f502cad8735f9a732c018f696931304155494281121297ff",
+      "workshopDependencies": [
+        "2898033283",
+        "2898069883",
+        "2927654156",
+        "2949018507",
+        "3306089551",
+        "3810492290"
+      ]
     }
   ]
 }
