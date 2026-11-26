@@ -34,10 +34,16 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.3.4",
+        "1.3.5",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
+        // KitchenLib can construct the initializer again while injecting mod
+        // systems. A second PreferenceSystemManager creates another dynamic
+        // top-level menu type even though its preference registry is rejected.
+        if (preferences != null)
+            return;
+
         preferences = new PreferenceSystemManager(ModId, "Text Display Controls")
             .AddSubmenu("Hot Pot House", "HotPotHouse")
             .AddLabel("Items")
@@ -69,7 +75,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.4 loaded with HPH and Colorblind+ dirty-side-dish suppression.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.5 loaded with single-registration menus and dirty-side-dish suppression.");
     }
 
     internal static bool IsColorblindPlusLoaded()
