@@ -22,6 +22,9 @@ public sealed class Main : BaseMod
     internal const string HidePotRackLabels = "Pot rack labels";
     internal const string HideSideDishRackLabel = "Side-dish rack label";
     internal const string HideSharedOrderLabels = "Shared order labels";
+    internal const string HideColorblindItemLabels = "Colorblind+ item labels";
+    internal const string HideCountUpProviderLabels = "CountUp! provider counters";
+    internal const string HideCountUpItemLabels = "CountUp! item portion and process labels";
     private static readonly bool[] ToggleValues = { false, true };
     private static readonly string[] ToggleNames = { "Show", "Hide" };
     private static PreferenceSystemManager preferences;
@@ -30,34 +33,47 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.1.0",
+        "1.2.0",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
-        preferences = new PreferenceSystemManager(ModId, "Hot Pot House - Colorblind+ Compatibility")
-            .AddLabel("Item labels")
+        preferences = new PreferenceSystemManager(ModId, "Text Display Controls")
+            .AddSubmenu("Hot Pot House", "HotPotHouse")
+            .AddLabel("Items")
             .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames)
             .AddOption<bool>(HidePotItemLabels, true, ToggleValues, ToggleNames)
-            .AddLabel("Provider labels")
+            .AddLabel("Providers")
             .AddOption<bool>(HideIngredientProviderLabels, true, ToggleValues, ToggleNames)
             .AddOption<bool>(HidePotRackLabels, true, ToggleValues, ToggleNames)
             .AddOption<bool>(HideSideDishRackLabel, true, ToggleValues, ToggleNames)
-            .AddLabel("Order labels")
+            .AddLabel("Orders")
             .AddOption<bool>(HideSharedOrderLabels, true, ToggleValues, ToggleNames)
-            .AddInfo("Regular items; pot/broth items; ingredient providers; pot racks; side-dish rack; shared orders. Changes take effect after restarting PlateUp.");
+            .SubmenuDone()
+            .AddSubmenu("Colorblind+", "ColorblindPlus")
+            .AddLabel("Item text")
+            .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames)
+            .AddInfo("Controls labels owned by Colorblind+. Its own detailed dish and font settings remain available in the Colorblind+ menu.")
+            .SubmenuDone()
+            .AddSubmenu("CountUp!", "CountUp")
+            .AddLabel("Provider text")
+            .AddOption<bool>(HideCountUpProviderLabels, false, ToggleValues, ToggleNames)
+            .AddLabel("Item text")
+            .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames)
+            .SubmenuDone()
+            .AddInfo("Text controls are grouped by the mod that creates them. Changes take effect after restarting PlateUp.");
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)0);
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)1);
     }
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.1.0 loaded with configurable label groups.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.2.0 loaded with per-mod text controls.");
     }
 
     internal static bool IsColorblindPlusLoaded()
     {
         return AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
-            string.Equals(assembly.GetName().Name, "Colorblind", StringComparison.OrdinalIgnoreCase));
+            (assembly.GetName().Name ?? string.Empty).StartsWith("Colorblind", StringComparison.OrdinalIgnoreCase));
     }
 
     internal static bool Hide(string key, bool fallback = true)
@@ -84,7 +100,7 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
 
     private static bool Prefix(Component __instance)
     {
-        if (!Main.IsColorblindPlusLoaded() || __instance == null)
+        if (__instance == null)
             return true;
 
         string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
@@ -120,7 +136,62 @@ internal static class HideHotPotHouseOrderTextPatch
         return nameTag == null ? null : AccessTools.Method(nameTag, "ForOrder");
     }
 
-    private static bool Prefix() => !Main.IsColorblindPlusLoaded() || !Main.Hide(Main.HideSharedOrderLabels);
+    private static bool Prefix() => !Main.Hide(Main.HideSharedOrderLabels);
+}
+
+[HarmonyPatch(typeof(ItemGroupView), "PerformUpdate")]
+internal static class ConfigureColorblindPlusItemLabelsPatch
+{
+    private static void Postfix(ItemGroupView __instance)
+    {
+        if (!Main.IsColorblindPlusLoaded() || !Main.Hide(Main.HideColorblindItemLabels) || __instance == null)
+            return;
+
+        Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
+            ?.GetValue(__instance) as Component;
+        if (label != null)
+            label.gameObject.SetActive(false);
+    }
+}
+
+[HarmonyPatch]
+internal static class ConfigureCountUpProviderLabelsPatch
+{
+    private static MethodBase TargetMethod()
+    {
+        Type view = AccessTools.TypeByName("KitchenCountUp.Views.ApplianceCountView");
+        return view == null ? null : AccessTools.Method(view, "UpdateData");
+    }
+
+    private static void Postfix(object __instance)
+    {
+        if (!Main.Hide(Main.HideCountUpProviderLabels) || __instance == null)
+            return;
+        Component countText = AccessTools.Field(__instance.GetType(), "CountText")
+            ?.GetValue(__instance) as Component;
+        if (countText != null)
+            countText.gameObject.SetActive(false);
+    }
+}
+
+[HarmonyPatch]
+internal static class ConfigureCountUpItemLabelsPatch
+{
+    private static MethodBase TargetMethod()
+    {
+        Type view = AccessTools.TypeByName("KitchenCountUp.Views.ItemIconView");
+        return view == null ? null : AccessTools.Method(view, "UpdateData");
+    }
+
+    private static void Postfix(object __instance)
+    {
+        if (!Main.Hide(Main.HideCountUpItemLabels) || __instance == null)
+            return;
+        Component processIcons = AccessTools.Field(__instance.GetType(), "ProcessIcons")
+            ?.GetValue(__instance) as Component;
+        if (processIcons != null)
+            processIcons.gameObject.SetActive(false);
+    }
 }
 
 [HarmonyPatch(typeof(ItemCollectionView), "UpdateData")]
