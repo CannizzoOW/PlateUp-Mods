@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.16.
+Version 2.4.17.
+
+- Maps clean HPH side dishes to vanilla clean plates for yellow dishwasher LEDs, while dirty side dishes retain the purple dirty-plate LEDs.
 
 - Strips inherited HPH ItemNameTag/NameTag and Colorblind+/TMP labels from generated guest-bowl contents, preventing labels such as `ChiNo` from appearing on bowls.
 

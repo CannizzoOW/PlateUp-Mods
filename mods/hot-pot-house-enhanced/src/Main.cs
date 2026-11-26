@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.16",
+            "2.4.17",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,13 +32,14 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.16 loaded; generated guest bowls strip inherited item labels.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.17 loaded; dishwasher LEDs map clean and dirty HPH side dishes.");
     }
 }
 
 internal static class UseVanillaProviderPrefabs
 {
     internal static GameObject CompletedSoupBowlPrefab { get; private set; }
+    internal static int CleanSideDishId { get; private set; }
     internal static int DirtySideDishId { get; private set; }
     private static readonly HashSet<string> RefrigeratorProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -193,6 +194,7 @@ internal static class UseVanillaProviderPrefabs
         // dish in their serialized storage slots and update the visible count.
         cleanSideDish.ItemStorageFlags = ItemStorage.Dish;
         dirtySideDish.ItemStorageFlags = ItemStorage.DirtyDish;
+        CleanSideDishId = cleanSideDish.ID;
         DirtySideDishId = dirtySideDish.ID;
         Debug.Log("[Hot Pot House Enhanced] Side dishes now use vanilla clean/dirty dish storage and appliance count visuals.");
     }
@@ -438,8 +440,14 @@ internal static class SideDishDishwasherLightsPatch
 {
     private static void Prefix(ref LimitedItemSourceLightsView.ViewData __0)
     {
-        if (UseVanillaProviderPrefabs.DirtySideDishId != 0 &&
-            __0.DisplayedType == UseVanillaProviderPrefabs.DirtySideDishId)
+        if (UseVanillaProviderPrefabs.CleanSideDishId != 0 &&
+            __0.DisplayedType == UseVanillaProviderPrefabs.CleanSideDishId)
+        {
+            // Reuse vanilla clean-plate yellow LEDs.
+            __0.DisplayedType = ItemReferences.Plate;
+        }
+        else if (UseVanillaProviderPrefabs.DirtySideDishId != 0 &&
+                 __0.DisplayedType == UseVanillaProviderPrefabs.DirtySideDishId)
         {
             // Vanilla dishwasher LEDs have a colour lookup for PlateDirty only.
             // Reuse that colour while preserving the real Hot Pot House amount.
