@@ -6,7 +6,7 @@ GitHub-backed local installer while Workshop releases await moderation.
 
 The patcher installs:
 
-- Hot Pot House Enhanced 2.4.11
+- Hot Pot House Enhanced 2.4.12
 - Hot Pot House Colorblind+ Compatibility 1.0.2
 - Hot Pot House CountUp! Compatibility 1.0.0
 
