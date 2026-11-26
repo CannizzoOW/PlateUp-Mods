@@ -22,6 +22,7 @@
     <Reference Include="KitchenMode"><HintPath>$(GameDir)\PlateUp_Data\Managed\KitchenMode.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="KitchenMods"><HintPath>$(GameDir)\PlateUp_Data\Managed\KitchenMods.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="KitchenLib-Workshop"><HintPath>$(WorkshopDir)\2898069883\KitchenLib-Workshop.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="PreferenceSystem-Workshop"><HintPath>$(WorkshopDir)\2949018507\PreferenceSystem-Workshop.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sirenix.Serialization"><HintPath>$(GameDir)\PlateUp_Data\Managed\Sirenix.Serialization.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Unity.Entities"><HintPath>$(GameDir)\PlateUp_Data\Managed\Unity.Entities.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameDir)\PlateUp_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
