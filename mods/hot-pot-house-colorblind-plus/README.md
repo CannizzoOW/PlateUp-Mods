@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.5.
+Version 1.7.6.
+
+Hidden HPH labels now exit before any component search, and dirty detection
+uses Colorblind+'s populated label directly. Pickup/drop no longer performs
+GameData or prefab lookups for HPH items.
 
 Dirty-item detection is cached, and HPH label handling now uses typed searches
 within the specific item marker instead of broad appliance component scans.

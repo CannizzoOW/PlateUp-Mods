@@ -38,7 +38,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.5",
+        "1.7.6",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -97,7 +97,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.5 loaded with cached item and typed label lookups.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.6 loaded with allocation-free hidden-label pickup handling.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -228,18 +228,15 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
         bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(__instance)) ||
                     Main.ShouldHideHotPotHouseLabel(content, isProvider);
 
-        Transform scope = __instance.transform;
-        List<Component> existingTags = GetNameTags(scope);
-
         if (hide)
         {
-            foreach (Component tag in existingTags)
-                tag.gameObject.SetActive(false);
             if (__instance is Behaviour hiddenMarker)
                 hiddenMarker.enabled = false;
             return false;
         }
 
+        Transform scope = __instance.transform;
+        List<Component> existingTags = GetNameTags(scope);
         if (existingTags.Count > 0)
         {
             existingTags[0].gameObject.SetActive(true);
@@ -411,7 +408,9 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
             return;
         Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
             ?.GetValue(instance) as Component;
-        bool dirtyItem = Main.IsDirtyItem(itemId) || Main.IsDirtyTextLabel(label);
+        // Colorblind+ has already populated its label at this Harmony priority.
+        // Reading that text avoids GameData/prefab lookups on every HPH pickup.
+        bool dirtyItem = Main.IsDirtyTextLabel(label);
         bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(instance)) ||
                     Main.Hide(Main.HideColorblindItemLabels, false) ||
                     (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtyItem);
