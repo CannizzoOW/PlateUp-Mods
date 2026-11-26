@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.13",
+            "2.4.14",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.13 loaded; shared-pot guest bowls are created once per completed order.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.14 loaded; shared-pot bowls are deduplicated per table and guest.");
     }
 }
 
@@ -563,6 +563,12 @@ internal static class SharedPotIds
 internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
 {
     private static readonly FieldInfo DrawnItemsField = AccessTools.Field(typeof(ItemCollectionView), "DrawnItems");
+    private sealed class BowlClaim
+    {
+        public ItemCollectionView Owner;
+        public int Index;
+    }
+    private static readonly Dictionary<string, BowlClaim> BowlClaims = new Dictionary<string, BowlClaim>();
 
     private static void Postfix(
         ItemCollectionView __instance,
@@ -592,6 +598,18 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         if (drawn.Item == null)
             return;
 
+        string tableKey = indexFor(itemInfo);
+        if (BowlClaims.TryGetValue(tableKey, out BowlClaim claim) &&
+            (claim.Owner != instance || claim.Index != index) && ClaimHasActiveBowl(claim))
+        {
+            // Only one completed shared-order view may create visuals for a
+            // table. Other customer/order views would otherwise add another
+            // complete set of bowls at the same seats.
+            drawn.Item.SetActive(false);
+            return;
+        }
+        BowlClaims[tableKey] = new BowlClaim { Owner = instance, Index = index };
+
         if (string.Equals(drawn.Item.name, "Hot Pot Guest Soup Bowl", StringComparison.Ordinal))
             return;
 
@@ -615,6 +633,18 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         CreateBowlsForOtherGuests(instance, itemInfo, template);
     }
 
+    private static bool ClaimHasActiveBowl(BowlClaim claim)
+    {
+        if (claim?.Owner == null || !claim.Owner.gameObject.activeInHierarchy)
+            return false;
+        ItemCollectionView.DrawnItem[] items = DrawnItemsField.GetValue(claim.Owner) as ItemCollectionView.DrawnItem[];
+        if (items == null || claim.Index < 0 || claim.Index >= items.Length)
+            return false;
+        GameObject item = items[claim.Index].Item;
+        return item != null && item.activeInHierarchy &&
+               item.name.StartsWith("Hot Pot Guest Soup Bowl", StringComparison.Ordinal);
+    }
+
     private static void CreateBowlsForOtherGuests(
         ItemCollectionView view,
         ItemCollectionView.ItemData itemInfo,
@@ -634,7 +664,9 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         holder.transform.SetParent(view.transform, false);
         Vector3 table = itemInfo.TablePosition;
         int created = 0;
-        var occupied = new List<Vector3> { itemInfo.SeatPosition };
+        Vector3 primarySeat = itemInfo.SeatPosition;
+        primarySeat.y = 0f;
+        var occupied = new List<Vector3> { primarySeat };
 
         foreach (CustomerView customer in UnityEngine.Object.FindObjectsOfType<CustomerView>())
         {

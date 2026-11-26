@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.13.
+Version 2.4.14.
+
+- Claims one visual owner per completed table order and normalises seat height before deduplication, guaranteeing at most one bowl per guest.
 
 - Creates guest soup bowls only once per completed shared order, preventing stacked bowl layers and continuous lag while food remains on the table.
 
