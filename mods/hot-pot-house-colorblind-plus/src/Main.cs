@@ -38,7 +38,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.6",
+        "1.8.0",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -53,42 +53,42 @@ public sealed class Main : BaseMod
             .AddInfo("Controls text created by Hot Pot House. Changes apply immediately.")
             .AddSubmenu("Items", "HotPotHouseItems")
             .AddLabel("Regular item names")
-            .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
             .AddLabel("Pot and broth names")
-            .AddOption<bool>(HidePotItemLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HidePotItemLabels, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
             .SubmenuDone()
             .AddSubmenu("Providers", "HotPotHouseProviders")
             .AddLabel("Ingredient provider names")
-            .AddOption<bool>(HideIngredientProviderLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideIngredientProviderLabels, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
             .AddLabel("Hot-pot rack names")
-            .AddOption<bool>(HidePotRackLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HidePotRackLabels, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
             .AddLabel("Side-dish rack name")
-            .AddOption<bool>(HideSideDishRackLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideSideDishRackLabel, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
             .SubmenuDone()
             .AddSubmenu("Orders", "HotPotHouseOrders")
             .AddLabel("Shared hot-pot order text")
-            .AddOption<bool>(HideSharedOrderLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideSharedOrderLabels, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
             .SubmenuDone()
             .SubmenuDone()
             .AddSubmenu("Colorblind+", "ColorblindPlus")
             .AddInfo("Controls text created by Colorblind+. Changes apply immediately.")
             .AddLabel("All Colorblind+ item text")
-            .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames, OnColorblindPreferenceChanged)
             .AddLabel("Served soup bowl text")
-            .AddOption<bool>(HideServedSoupBowlLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideServedSoupBowlLabels, true, ToggleValues, ToggleNames, OnSoupBowlPreferenceChanged)
             .AddLabel("Dirty item text")
-            .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames, OnDirtyPreferenceChanged)
             .AddInfo("Controls Colorblind+ Dirty text. The smaller duplicate HPH text stays hidden.")
             .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
             .AddInfo("Controls text created by CountUp!. Changes apply immediately.")
             .AddLabel("Ingredient provider counters")
-            .AddOption<bool>(HideCountUpIngredientProviderLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideCountUpIngredientProviderLabels, false, ToggleValues, ToggleNames, OnCountUpProviderPreferenceChanged)
             .AddLabel("Other provider counters")
-            .AddOption<bool>(HideCountUpOtherProviderLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideCountUpOtherProviderLabels, false, ToggleValues, ToggleNames, OnCountUpProviderPreferenceChanged)
             .AddLabel("Item portion and process text")
-            .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames, OnCountUpItemPreferenceChanged)
             .SubmenuDone()
             .AddInfo("Choose the mod that creates the text you want to control. Changes apply immediately.");
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)0);
@@ -97,21 +97,39 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.6 loaded with allocation-free hidden-label pickup handling.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.0 loaded with targeted live preference refreshes.");
     }
 
-    private static void OnTextPreferenceChanged(bool value)
-    {
-        RefreshLiveText();
-    }
-
-    internal static void RefreshLiveText()
+    private static void OnHotPotHousePreferenceChanged(bool value)
     {
         ConfigureHotPotHouseItemAndProviderLabelsPatch.RefreshExisting();
         PersistentlySuppressHotPotHouseLabelsPatch.RefreshExisting();
+    }
+
+    private static void OnColorblindPreferenceChanged(bool value)
+    {
         ConfigureColorblindPlusItemLabelsPatch.RefreshExisting();
+    }
+
+    private static void OnSoupBowlPreferenceChanged(bool value)
+    {
         ConfigureServedSoupBowlLabelsPatch.RefreshExisting();
+    }
+
+    private static void OnDirtyPreferenceChanged(bool value)
+    {
+        ConfigureColorblindPlusItemLabelsPatch.RefreshExisting();
+        ConfigureHotPotHouseItemAndProviderLabelsPatch.RefreshExisting();
+        PersistentlySuppressHotPotHouseLabelsPatch.RefreshExisting();
+    }
+
+    private static void OnCountUpProviderPreferenceChanged(bool value)
+    {
         ConfigureCountUpProviderLabelsPatch.RefreshExisting();
+    }
+
+    private static void OnCountUpItemPreferenceChanged(bool value)
+    {
         ConfigureCountUpItemLabelsPatch.RefreshExisting();
     }
 
@@ -477,7 +495,7 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 internal static class ConfigureServedSoupBowlLabelsPatch
 {
     private static readonly HashSet<GameObject> HiddenTextObjects = new HashSet<GameObject>();
-    private static readonly HashSet<GameObject> ProcessedRoots = new HashSet<GameObject>();
+    private static readonly HashSet<GameObject> TrackedRoots = new HashSet<GameObject>();
     private static readonly FieldInfo DrawnItemsField = AccessTools.Field(typeof(ItemCollectionView), "DrawnItems");
 
     private static MethodBase TargetMethod()
@@ -488,7 +506,7 @@ internal static class ConfigureServedSoupBowlLabelsPatch
 
     private static void Postfix(ItemCollectionView __0, int __1, ItemCollectionView.ItemData __2)
     {
-        if (!Main.Hide(Main.HideServedSoupBowlLabels) || __0 == null || DrawnItemsField == null)
+        if (__0 == null || DrawnItemsField == null)
             return;
 
         ItemCollectionView.DrawnItem[] drawnItems = DrawnItemsField.GetValue(__0) as ItemCollectionView.DrawnItem[];
@@ -496,13 +514,13 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         {
             GameObject bowl = drawnItems[__1].Item;
             if (bowl != null && bowl.name.StartsWith("Hot Pot Guest Soup Bowl", StringComparison.Ordinal))
-                HideTextInRootOnce(bowl);
+                TrackRoot(bowl);
         }
 
         string holderName = $"Hot Pot Guest Bowls {Mathf.RoundToInt(__2.TablePosition.x * 10f)}_{Mathf.RoundToInt(__2.TablePosition.z * 10f)}";
         Transform holder = __0.transform.Find(holderName);
         if (holder != null)
-            HideTextInRootOnce(holder.gameObject);
+            TrackRoot(holder.gameObject);
     }
 
     internal static void RefreshExisting()
@@ -514,20 +532,32 @@ internal static class ConfigureServedSoupBowlLabelsPatch
                 if (textObject != null)
                     textObject.SetActive(true);
             HiddenTextObjects.Clear();
-            ProcessedRoots.Clear();
             return;
         }
 
-        // Menu changes are rare, so refresh each order view once. Hot-pot
-        // delivery itself uses only the single affected view in Postfix.
-        foreach (ItemCollectionView view in Resources.FindObjectsOfTypeAll<ItemCollectionView>())
-            if (view != null && view.gameObject.scene.IsValid())
-                HideTextInScope(view.transform);
+        foreach (GameObject root in TrackedRoots.ToArray())
+        {
+            if (root == null)
+                TrackedRoots.Remove(root);
+            else
+                HideTextInRoot(root);
+        }
     }
 
-    private static void HideTextInRootOnce(GameObject root)
+    private static void TrackRoot(GameObject root)
     {
-        if (root == null || !ProcessedRoots.Add(root))
+        if (root == null || !TrackedRoots.Add(root))
+            return;
+        SoupBowlTextWatcher watcher = root.GetComponent<SoupBowlTextWatcher>() ?? root.AddComponent<SoupBowlTextWatcher>();
+        watcher.RemainingFrames = 4;
+        watcher.enabled = true;
+        if (Main.Hide(Main.HideServedSoupBowlLabels))
+            HideTextInRoot(root);
+    }
+
+    internal static void HideTextInRoot(GameObject root)
+    {
+        if (root == null)
             return;
         foreach (Component component in root.GetComponentsInChildren<Component>(true))
         {
@@ -537,19 +567,20 @@ internal static class ConfigureServedSoupBowlLabelsPatch
             component.gameObject.SetActive(false);
         }
     }
+}
 
-    private static void HideTextInScope(Transform scope)
+internal sealed class SoupBowlTextWatcher : MonoBehaviour
+{
+    internal int RemainingFrames;
+
+    private void LateUpdate()
     {
-        if (scope == null)
-            return;
-        foreach (Component component in scope.GetComponentsInChildren<Component>(true))
+        if (!Main.Hide(Main.HideServedSoupBowlLabels) || RemainingFrames-- <= 0)
         {
-            if (component == null || component.GetType().Namespace != "TMPro" ||
-                !component.gameObject.activeSelf || !Main.IsServedHotPotBowlVisual(component))
-                continue;
-            HiddenTextObjects.Add(component.gameObject);
-            component.gameObject.SetActive(false);
+            enabled = false;
+            return;
         }
+        ConfigureServedSoupBowlLabelsPatch.HideTextInRoot(gameObject);
     }
 }
 

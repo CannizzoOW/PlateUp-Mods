@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.6.
+Version 1.8.0.
+
+Live preference callbacks are now isolated per category. Soup-bowl changes
+touch only tracked bowl roots, and a four-frame watcher catches both HPH and
+Colorblind+ labels created shortly after the bowls without ongoing scanning.
 
 Hidden HPH labels now exit before any component search, and dirty detection
 uses Colorblind+'s populated label directly. Pickup/drop no longer performs
