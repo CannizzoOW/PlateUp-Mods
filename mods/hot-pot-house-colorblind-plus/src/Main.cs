@@ -34,7 +34,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.3.1",
+        "1.3.2",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -69,7 +69,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.1 loaded with persistent text suppression, served-bowl cleanup and per-mod controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.2 loaded with source-level label suppression, duplicate cleanup and per-mod controls.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -149,7 +149,36 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
 
         string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
         bool isProvider = __instance.GetComponentInParent<ApplianceView>() != null;
-        return !Main.ShouldHideHotPotHouseLabel(content, isProvider);
+        bool hide = Main.IsServedHotPotBowlVisual(__instance) || Main.ShouldHideHotPotHouseLabel(content, isProvider);
+
+        Transform scope = isProvider
+            ? __instance.GetComponentInParent<ApplianceView>().transform
+            : __instance.transform;
+        List<Component> existingTags = scope.GetComponentsInChildren<Component>(true)
+            .Where(component => component != null && component.GetType().FullName == "HotPotHouse.NameTag")
+            .ToList();
+
+        if (hide)
+        {
+            foreach (Component tag in existingTags)
+                tag.gameObject.SetActive(false);
+            // The marker itself is the factory. Disabling only its output lets
+            // rebuilt provider views create another label later.
+            __instance.gameObject.SetActive(false);
+            return false;
+        }
+
+        if (existingTags.Count > 0)
+        {
+            existingTags[0].gameObject.SetActive(true);
+            foreach (Component duplicate in existingTags.Skip(1))
+                duplicate.gameObject.SetActive(false);
+            if (__instance is Behaviour markerBehaviour)
+                markerBehaviour.enabled = false;
+            return false;
+        }
+
+        return true;
     }
 }
 
