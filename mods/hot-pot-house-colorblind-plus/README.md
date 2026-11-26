@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.8.2.
+Version 1.8.3.
+
+Completed served-order views remain registered while alive. Later
+Colorblind+ ItemGroupView updates inside them are suppressed event-by-event,
+preventing delayed labels such as `ChiNo` without per-frame scanning.
 
 Served bowl text suppression now includes the completed order view because HPH
 and Colorblind+ can place labels beside the bowl rather than beneath its mesh.

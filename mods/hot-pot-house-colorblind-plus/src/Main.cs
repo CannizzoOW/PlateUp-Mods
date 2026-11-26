@@ -38,7 +38,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.8.2",
+        "1.8.3",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -97,7 +97,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.2 loaded with served-order text scope tracking.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.3 loaded with persistent served-order Colorblind+ suppression.");
     }
 
     private static void OnHotPotHousePreferenceChanged(bool value)
@@ -426,7 +426,9 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
         // Colorblind+ has already populated its label at this Harmony priority.
         // Reading that text avoids GameData/prefab lookups on every HPH pickup.
         bool dirtyItem = Main.IsDirtyTextLabel(label);
-        bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(instance)) ||
+        bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) &&
+                     (Main.IsServedHotPotBowlVisual(instance) ||
+                      ConfigureServedSoupBowlLabelsPatch.IsInServedOrderView(instance))) ||
                     Main.Hide(Main.HideColorblindItemLabels, false) ||
                     (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtyItem);
 
@@ -492,6 +494,7 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 internal static class ConfigureServedSoupBowlLabelsPatch
 {
     private static readonly HashSet<GameObject> TrackedRoots = new HashSet<GameObject>();
+    private static readonly HashSet<GameObject> ServedOrderViews = new HashSet<GameObject>();
     private static readonly Dictionary<GameObject, HashSet<GameObject>> HiddenTextByRoot = new Dictionary<GameObject, HashSet<GameObject>>();
     private static readonly FieldInfo DrawnItemsField = AccessTools.Field(typeof(ItemCollectionView), "DrawnItems");
 
@@ -514,6 +517,7 @@ internal static class ConfigureServedSoupBowlLabelsPatch
             {
                 // HPH and Colorblind+ can place served-item text beside the
                 // bowl under the order view rather than below the bowl mesh.
+                ServedOrderViews.Add(__0.gameObject);
                 TrackRoot(__0.gameObject);
                 TrackRoot(bowl);
             }
@@ -579,8 +583,17 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         if (root != null)
         {
             TrackedRoots.Remove(root);
+            ServedOrderViews.Remove(root);
             HiddenTextByRoot.Remove(root);
         }
+    }
+
+    internal static bool IsInServedOrderView(Component component)
+    {
+        for (Transform current = component?.transform; current != null; current = current.parent)
+            if (ServedOrderViews.Contains(current.gameObject))
+                return true;
+        return false;
     }
 }
 
