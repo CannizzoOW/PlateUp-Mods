@@ -24,7 +24,8 @@ public sealed class Main : BaseMod
     internal const string HideSharedOrderLabels = "Shared order labels";
     internal const string HideColorblindItemLabels = "Colorblind+ item labels";
     internal const string HideColorblindDirtySideDishLabel = "Dirty Hot Pot House side-dish label";
-    internal const string HideCountUpProviderLabels = "CountUp! provider counters";
+    internal const string HideCountUpIngredientProviderLabels = "CountUp! ingredient provider counters";
+    internal const string HideCountUpOtherProviderLabels = "CountUp! other provider counters";
     internal const string HideCountUpItemLabels = "CountUp! item portion and process labels";
     private static readonly bool[] ToggleValues = { false, true };
     private static readonly string[] ToggleNames = { "Show text", "Hide text" };
@@ -34,7 +35,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.5.0",
+        "1.6.0",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -76,8 +77,10 @@ public sealed class Main : BaseMod
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
             .AddInfo("Controls text created by CountUp!. Changes apply immediately.")
-            .AddLabel("Provider stock counters")
-            .AddOption<bool>(HideCountUpProviderLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddLabel("Ingredient provider counters")
+            .AddOption<bool>(HideCountUpIngredientProviderLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddLabel("Other provider counters")
+            .AddOption<bool>(HideCountUpOtherProviderLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Item portion and process text")
             .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .SubmenuDone()
@@ -88,7 +91,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.5.0 loaded with live text controls and dirty-side-dish suppression.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.6.0 loaded with live text controls and split CountUp provider controls.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -357,6 +360,8 @@ internal static class HideHotPotHouseOrderTextPatch
 internal static class ConfigureColorblindPlusItemLabelsPatch
 {
     private static readonly Dictionary<ItemGroupView, int> KnownViews = new Dictionary<ItemGroupView, int>();
+    private static readonly Dictionary<ItemGroupView, HashSet<GameObject>> HiddenTextObjects = new Dictionary<ItemGroupView, HashSet<GameObject>>();
+    private static readonly Dictionary<ItemGroupView, bool> OriginalForceNoColourblind = new Dictionary<ItemGroupView, bool>();
 
     private static void Postfix(ItemGroupView __instance, int __0)
     {
@@ -374,23 +379,52 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
         bool hide = Main.IsServedHotPotBowlVisual(instance) ||
                     Main.Hide(Main.HideColorblindItemLabels, false) ||
                     (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtySideDish);
-        instance.ForceNoColourblind = hide;
-
         Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
             ?.GetValue(instance) as Component;
-        if (label != null)
-            label.gameObject.SetActive(!hide);
 
-        // Colorblind+ can populate additional TMP children rather than the
-        // single vanilla ColourblindLabel field. Disable every text renderer
-        // on this specific dirty HPH item view so none can retain "Dirty".
-        if (dirtySideDish || Main.Hide(Main.HideColorblindItemLabels, false))
+        if (hide)
         {
-            foreach (Component component in instance.GetComponentsInChildren<Component>(true))
+            if (!OriginalForceNoColourblind.ContainsKey(instance))
+                OriginalForceNoColourblind[instance] = instance.ForceNoColourblind;
+            instance.ForceNoColourblind = true;
+            if (!HiddenTextObjects.TryGetValue(instance, out HashSet<GameObject> hidden))
+                HiddenTextObjects[instance] = hidden = new HashSet<GameObject>();
+
+            if (label != null && label.gameObject.activeSelf)
             {
-                if (component != null && component.GetType().Namespace == "TMPro")
-                    component.gameObject.SetActive(!hide);
+                hidden.Add(label.gameObject);
+                label.gameObject.SetActive(false);
             }
+
+            // Colorblind+ can populate additional TMP children rather than
+            // the single vanilla ColourblindLabel field.
+            if (dirtySideDish || Main.Hide(Main.HideColorblindItemLabels, false))
+            {
+                foreach (Component component in instance.GetComponentsInChildren<Component>(true))
+                {
+                    if (component != null && component.GetType().Namespace == "TMPro" && component.gameObject.activeSelf)
+                    {
+                        hidden.Add(component.gameObject);
+                        component.gameObject.SetActive(false);
+                    }
+                }
+            }
+            return;
+        }
+
+        // Restore only objects hidden by this compatibility mod. Activating
+        // every TMP child exposed Colorblind+'s internal/debug labels.
+        if (HiddenTextObjects.TryGetValue(instance, out HashSet<GameObject> restore))
+        {
+            foreach (GameObject textObject in restore)
+                if (textObject != null)
+                    textObject.SetActive(true);
+            HiddenTextObjects.Remove(instance);
+        }
+        if (OriginalForceNoColourblind.TryGetValue(instance, out bool originalForceNoColourblind))
+        {
+            instance.ForceNoColourblind = originalForceNoColourblind;
+            OriginalForceNoColourblind.Remove(instance);
         }
     }
 
@@ -409,6 +443,8 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 [HarmonyPatch]
 internal static class ConfigureCountUpProviderLabelsPatch
 {
+    private static readonly HashSet<GameObject> HiddenCounters = new HashSet<GameObject>();
+
     private static IEnumerable<MethodBase> TargetMethods()
     {
         Type view = AccessTools.TypeByName("KitchenCountUp.Views.ApplianceCountView");
@@ -426,12 +462,65 @@ internal static class ConfigureCountUpProviderLabelsPatch
 
     private static void Apply(object instance)
     {
-        if (instance == null)
+        Component view = instance as Component;
+        if (view == null)
             return;
         Component countText = AccessTools.Field(instance.GetType(), "CountText")
             ?.GetValue(instance) as Component;
-        if (countText != null)
-            countText.gameObject.SetActive(!Main.Hide(Main.HideCountUpProviderLabels, false));
+        if (countText == null)
+            return;
+
+        bool ingredientProvider = IsIngredientProvider(view);
+        string preference = ingredientProvider
+            ? Main.HideCountUpIngredientProviderLabels
+            : Main.HideCountUpOtherProviderLabels;
+        bool hide = Main.Hide(preference, false);
+
+        if (hide)
+        {
+            if (countText.gameObject.activeSelf)
+                HiddenCounters.Add(countText.gameObject);
+            countText.gameObject.SetActive(false);
+        }
+        else if (HiddenCounters.Remove(countText.gameObject))
+        {
+            countText.gameObject.SetActive(true);
+        }
+    }
+
+    private static bool IsIngredientProvider(Component countView)
+    {
+        ApplianceView applianceView = countView.GetComponent<ApplianceView>() ??
+                                      countView.GetComponentInParent<ApplianceView>();
+        if (applianceView == null)
+            return false;
+
+        Component marker = applianceView.GetComponentsInChildren<Component>(true)
+            .FirstOrDefault(component => component != null && component.GetType().FullName == "HotPotHouse.ItemNameTag");
+        if (marker != null)
+        {
+            string content = AccessTools.Field(marker.GetType(), "Content")?.GetValue(marker) as string ?? string.Empty;
+            return !string.Equals(content, "Side Dishes", StringComparison.OrdinalIgnoreCase) &&
+                   !ConfigureHotPotHouseItemAndProviderLabelsPatch.PotRackLabels.Contains(content);
+        }
+
+        try
+        {
+            GameObject prefab = AccessTools.Field(typeof(ApplianceView), "Prefab")?.GetValue(applianceView) as GameObject;
+            Appliance appliance = GameData.Main.Get<Appliance>().FirstOrDefault(candidate =>
+                candidate != null && prefab != null &&
+                (candidate.Prefab == prefab || string.Equals(candidate.Prefab?.name, prefab.name, StringComparison.Ordinal)));
+            CItemProvider? provider = appliance?.Properties.OfType<CItemProvider>().Cast<CItemProvider?>().FirstOrDefault();
+            Item providedItem = provider.HasValue ? GameData.Main.Get<Item>(provider.Value.ProvidedItem) : null;
+
+            // Plates, dishes, pots and similar reusable vessels are providers,
+            // but not ingredients. Ingredient items are disposable stock.
+            return providedItem != null && !providedItem.IsIndisposable;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     internal static void RefreshExisting()

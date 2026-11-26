@@ -1,6 +1,11 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.5.0.
+Version 1.6.0.
+
+CountUp! provider counters are now split into separate controls for ingredient
+providers and other providers such as plate, dish and pot racks. Live toggles
+restore only text objects hidden by this compatibility mod, preventing hidden
+Colorblind+ internal labels such as `Me` and `O` from appearing across the map.
 
 Disabled Hot Pot House labels are now suppressed continuously so pooled views
 cannot restore old or duplicate text. Colorblind+'s `Dirty` label on Hot Pot
