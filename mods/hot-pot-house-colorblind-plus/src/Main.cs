@@ -34,7 +34,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.3.2",
+        "1.3.3",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -69,7 +69,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.2 loaded with source-level label suppression, duplicate cleanup and per-mod controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.3 loaded with robust dirty-side-dish detection and source-level label suppression.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -104,7 +104,15 @@ public sealed class Main : BaseMod
         try
         {
             Item item = GameData.Main.Get<Item>(itemId);
-            return item != null && item.name.EndsWith(" - dirty_side_dish", StringComparison.OrdinalIgnoreCase);
+            string itemName = item?.name ?? string.Empty;
+            if (itemName.IndexOf("hotpothouse", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                itemName.IndexOf("dirty_side_dish", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+
+            GameObject prefab = GameData.Main.GetPrefab(itemId);
+            string prefabName = prefab?.name ?? string.Empty;
+            return prefabName.IndexOf("dirty_side_dish", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   prefabName.IndexOf("side_dish_dirty", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
         {
@@ -247,10 +255,24 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
         if (!hide)
             return;
 
+        __instance.ForceNoColourblind = true;
+
         Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
             ?.GetValue(__instance) as Component;
         if (label != null)
             label.gameObject.SetActive(false);
+
+        // Colorblind+ can populate additional TMP children rather than the
+        // single vanilla ColourblindLabel field. Disable every text renderer
+        // on this specific dirty HPH item view so none can retain "Dirty".
+        if (Main.IsHotPotHouseDirtySideDish(__0))
+        {
+            foreach (Component component in __instance.GetComponentsInChildren<Component>(true))
+            {
+                if (component != null && component.GetType().Namespace == "TMPro")
+                    component.gameObject.SetActive(false);
+            }
+        }
     }
 }
 
