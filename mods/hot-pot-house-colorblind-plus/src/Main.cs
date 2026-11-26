@@ -38,7 +38,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.8.0",
+        "1.8.1",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -50,7 +50,7 @@ public sealed class Main : BaseMod
 
         preferences = new PreferenceSystemManager(ModId, "Text Display Controls")
             .AddSubmenu("Hot Pot House", "HotPotHouse")
-            .AddInfo("Controls text created by Hot Pot House. Changes apply immediately.")
+            .AddInfo("Controls text created by Hot Pot House. Changes apply on the next affected view update.")
             .AddSubmenu("Items", "HotPotHouseItems")
             .AddLabel("Regular item names")
             .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames, OnHotPotHousePreferenceChanged)
@@ -71,7 +71,7 @@ public sealed class Main : BaseMod
             .SubmenuDone()
             .SubmenuDone()
             .AddSubmenu("Colorblind+", "ColorblindPlus")
-            .AddInfo("Controls text created by Colorblind+. Changes apply immediately.")
+            .AddInfo("Controls text created by Colorblind+. Changes apply on the next affected view update.")
             .AddLabel("All Colorblind+ item text")
             .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames, OnColorblindPreferenceChanged)
             .AddLabel("Served soup bowl text")
@@ -82,7 +82,7 @@ public sealed class Main : BaseMod
             .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
-            .AddInfo("Controls text created by CountUp!. Changes apply immediately.")
+            .AddInfo("Controls text created by CountUp!. Changes apply on the next affected view update.")
             .AddLabel("Ingredient provider counters")
             .AddOption<bool>(HideCountUpIngredientProviderLabels, false, ToggleValues, ToggleNames, OnCountUpProviderPreferenceChanged)
             .AddLabel("Other provider counters")
@@ -90,25 +90,24 @@ public sealed class Main : BaseMod
             .AddLabel("Item portion and process text")
             .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames, OnCountUpItemPreferenceChanged)
             .SubmenuDone()
-            .AddInfo("Choose the mod that creates the text you want to control. Changes apply immediately.");
+            .AddInfo("Choose the mod that creates the text you want to control. No restart is required.");
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)0);
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)1);
     }
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.0 loaded with targeted live preference refreshes.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.1 loaded without synchronous global preference refreshes.");
     }
 
     private static void OnHotPotHousePreferenceChanged(bool value)
     {
-        ConfigureHotPotHouseItemAndProviderLabelsPatch.RefreshExisting();
-        PersistentlySuppressHotPotHouseLabelsPatch.RefreshExisting();
+        // Applied by the existing Start/LateUpdate hooks as views update.
     }
 
     private static void OnColorblindPreferenceChanged(bool value)
     {
-        ConfigureColorblindPlusItemLabelsPatch.RefreshExisting();
+        // Applied by ItemGroupView.PerformUpdate.
     }
 
     private static void OnSoupBowlPreferenceChanged(bool value)
@@ -118,19 +117,17 @@ public sealed class Main : BaseMod
 
     private static void OnDirtyPreferenceChanged(bool value)
     {
-        ConfigureColorblindPlusItemLabelsPatch.RefreshExisting();
-        ConfigureHotPotHouseItemAndProviderLabelsPatch.RefreshExisting();
-        PersistentlySuppressHotPotHouseLabelsPatch.RefreshExisting();
+        // Applied by the item and HPH label hooks.
     }
 
     private static void OnCountUpProviderPreferenceChanged(bool value)
     {
-        ConfigureCountUpProviderLabelsPatch.RefreshExisting();
+        // Applied by CountUp!'s next ApplianceCountView.UpdateData.
     }
 
     private static void OnCountUpItemPreferenceChanged(bool value)
     {
-        ConfigureCountUpItemLabelsPatch.RefreshExisting();
+        // Applied by CountUp!'s next ItemIconView.UpdateData.
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -494,7 +491,6 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 [HarmonyPatch]
 internal static class ConfigureServedSoupBowlLabelsPatch
 {
-    private static readonly HashSet<GameObject> HiddenTextObjects = new HashSet<GameObject>();
     private static readonly HashSet<GameObject> TrackedRoots = new HashSet<GameObject>();
     private static readonly FieldInfo DrawnItemsField = AccessTools.Field(typeof(ItemCollectionView), "DrawnItems");
 
@@ -526,21 +522,12 @@ internal static class ConfigureServedSoupBowlLabelsPatch
     internal static void RefreshExisting()
     {
         bool hide = Main.Hide(Main.HideServedSoupBowlLabels);
-        if (!hide)
-        {
-            foreach (GameObject textObject in HiddenTextObjects.ToArray())
-                if (textObject != null)
-                    textObject.SetActive(true);
-            HiddenTextObjects.Clear();
-            return;
-        }
-
         foreach (GameObject root in TrackedRoots.ToArray())
         {
             if (root == null)
                 TrackedRoots.Remove(root);
             else
-                HideTextInRoot(root);
+                SetTextVisible(root, !hide);
         }
     }
 
@@ -552,20 +539,25 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         watcher.RemainingFrames = 4;
         watcher.enabled = true;
         if (Main.Hide(Main.HideServedSoupBowlLabels))
-            HideTextInRoot(root);
+            SetTextVisible(root, false);
     }
 
-    internal static void HideTextInRoot(GameObject root)
+    internal static void SetTextVisible(GameObject root, bool visible)
     {
         if (root == null)
             return;
         foreach (Component component in root.GetComponentsInChildren<Component>(true))
         {
-            if (component == null || component.GetType().Namespace != "TMPro" || !component.gameObject.activeSelf)
+            if (component == null || component.GetType().Namespace != "TMPro")
                 continue;
-            HiddenTextObjects.Add(component.gameObject);
-            component.gameObject.SetActive(false);
+            component.gameObject.SetActive(visible);
         }
+    }
+
+    internal static void Untrack(GameObject root)
+    {
+        if (root != null)
+            TrackedRoots.Remove(root);
     }
 }
 
@@ -580,7 +572,12 @@ internal sealed class SoupBowlTextWatcher : MonoBehaviour
             enabled = false;
             return;
         }
-        ConfigureServedSoupBowlLabelsPatch.HideTextInRoot(gameObject);
+        ConfigureServedSoupBowlLabelsPatch.SetTextVisible(gameObject, false);
+    }
+
+    private void OnDestroy()
+    {
+        ConfigureServedSoupBowlLabelsPatch.Untrack(gameObject);
     }
 }
 

@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.8.0.
+Version 1.8.1.
+
+Preference changes no longer run synchronous global refreshes. Bowl roots
+unregister themselves on destruction, so soup text toggles touch only bowls
+currently present at tables and cannot accumulate a session-long history.
 
 Live preference callbacks are now isolated per category. Soup-bowl changes
 touch only tracked bowl roots, and a four-frame watcher catches both HPH and
