@@ -1,6 +1,12 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.8.3.
+Version 1.8.5.
+
+Dirty base-game ItemGroupView labels receive a short reactivation guard after
+updates, preventing Colorblind+ styled `Dirty` text from being restored later.
+
+Served table positions provide a hierarchy-independent fallback for delayed
+Colorblind+ labels placed in separate customer/request holders.
 
 Completed served-order views remain registered while alive. Later
 Colorblind+ ItemGroupView updates inside them are suppressed event-by-event,

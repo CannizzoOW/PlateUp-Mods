@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.17.
+Version 2.4.18.
+
+- Strips label producers from the SoupsPlus Chicken Noodle Soup template itself, removing the remaining `ChiNo` label before guest bowls are cloned.
 
 - Maps clean HPH side dishes to vanilla clean plates for yellow dishwasher LEDs, while dirty side dishes retain the purple dirty-plate LEDs.
 

@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.17",
+            "2.4.18",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.17 loaded; dishwasher LEDs map clean and dirty HPH side dishes.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.18 loaded; SoupsPlus and HPH labels are stripped from guest bowls.");
     }
 }
 
@@ -628,6 +628,7 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         bowl.transform.localPosition = Vector3.zero;
         bowl.transform.localRotation = Quaternion.identity;
         bowl.SetActive(true);
+        DisableItemLabels(bowl);
         FillBowlFromServedPot(bowl, itemInfo);
 
         foreach (Renderer renderer in bowl.GetComponentsInChildren<Renderer>(true))
@@ -737,22 +738,7 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         Transform potBase = contents.transform.Find("base");
         if (potBase != null)
             potBase.gameObject.SetActive(false);
-        foreach (Component component in contents.GetComponentsInChildren<Component>(true))
-        {
-            if (component == null)
-                continue;
-            string typeName = component.GetType().FullName ?? string.Empty;
-            if (string.Equals(typeName, "HotPotHouse.NameTag", StringComparison.Ordinal) ||
-                string.Equals(typeName, "HotPotHouse.ItemNameTag", StringComparison.Ordinal) ||
-                string.Equals(component.GetType().Namespace, "TMPro", StringComparison.Ordinal))
-            {
-                if (component is Behaviour behaviour)
-                    behaviour.enabled = false;
-                component.gameObject.SetActive(false);
-            }
-            if (component is ItemGroupView itemView)
-                itemView.ForceNoColourblind = true;
-        }
+        DisableItemLabels(contents);
         Renderer[] bowlRenderers = bowlMesh.GetComponentsInChildren<Renderer>(true);
         Renderer[] contentRenderers = contents.GetComponentsInChildren<Renderer>(true)
             .Where(renderer => renderer.gameObject.activeInHierarchy)
@@ -776,6 +762,28 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
             contentBounds.center.x,
             contentBounds.min.y,
             contentBounds.center.z);
+    }
+
+    private static void DisableItemLabels(GameObject root)
+    {
+        if (root == null)
+            return;
+        foreach (Component component in root.GetComponentsInChildren<Component>(true))
+        {
+            if (component == null)
+                continue;
+            string typeName = component.GetType().FullName ?? string.Empty;
+            if (string.Equals(typeName, "HotPotHouse.NameTag", StringComparison.Ordinal) ||
+                string.Equals(typeName, "HotPotHouse.ItemNameTag", StringComparison.Ordinal) ||
+                string.Equals(component.GetType().Namespace, "TMPro", StringComparison.Ordinal))
+            {
+                if (component is Behaviour behaviour)
+                    behaviour.enabled = false;
+                component.gameObject.SetActive(false);
+            }
+            if (component is ItemGroupView itemView)
+                itemView.ForceNoColourblind = true;
+        }
     }
 
     private static Bounds CombinedBounds(Renderer[] renderers)
