@@ -23,6 +23,7 @@ public sealed class Main : BaseMod
     internal const string HideSideDishRackLabel = "Side-dish rack label";
     internal const string HideSharedOrderLabels = "Shared order labels";
     internal const string HideColorblindItemLabels = "Colorblind+ item labels";
+    internal const string HideColorblindDirtySideDishLabel = "Dirty Hot Pot House side-dish label";
     internal const string HideCountUpProviderLabels = "CountUp! provider counters";
     internal const string HideCountUpItemLabels = "CountUp! item portion and process labels";
     private static readonly bool[] ToggleValues = { false, true };
@@ -33,7 +34,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.2.1",
+        "1.3.0",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -52,6 +53,7 @@ public sealed class Main : BaseMod
             .AddSubmenu("Colorblind+", "ColorblindPlus")
             .AddLabel("Item text")
             .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames)
             .AddInfo("Controls labels owned by Colorblind+. Its own detailed dish and font settings remain available in the Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
@@ -67,7 +69,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.2.1 loaded with per-mod text controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.0 loaded with persistent Hot Pot House text suppression and per-mod controls.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -80,12 +82,41 @@ public sealed class Main : BaseMod
     {
         return preferences != null && preferences.TryGet<bool>(key, out bool value) ? value : fallback;
     }
+
+    internal static bool ShouldHideHotPotHouseLabel(string content, bool isProvider)
+    {
+        if (isProvider)
+        {
+            if (string.Equals(content, "Side Dishes", StringComparison.OrdinalIgnoreCase))
+                return Hide(HideSideDishRackLabel);
+            if (ConfigureHotPotHouseItemAndProviderLabelsPatch.PotRackLabels.Contains(content))
+                return Hide(HidePotRackLabels);
+            return Hide(HideIngredientProviderLabels);
+        }
+
+        bool isPotOrBroth = content.IndexOf("pot", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            content.IndexOf("broth", StringComparison.OrdinalIgnoreCase) >= 0;
+        return Hide(isPotOrBroth ? HidePotItemLabels : HideRegularItemLabels);
+    }
+
+    internal static bool IsHotPotHouseDirtySideDish(int itemId)
+    {
+        try
+        {
+            Item item = GameData.Main.Get<Item>(itemId);
+            return item != null && item.name.EndsWith(" - dirty_side_dish", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 
 [HarmonyPatch]
 internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
 {
-    private static readonly HashSet<string> PotRackLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    internal static readonly HashSet<string> PotRackLabels = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "Small Hot Pots",
         "Large Hot Pots",
@@ -105,25 +136,46 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
 
         string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
         bool isProvider = __instance.GetComponentInParent<ApplianceView>() != null;
-        bool hide;
+        return !Main.ShouldHideHotPotHouseLabel(content, isProvider);
+    }
+}
 
-        if (isProvider)
+[HarmonyPatch]
+internal static class PersistentlySuppressHotPotHouseLabelsPatch
+{
+    private static MethodBase TargetMethod()
+    {
+        Type nameTag = AccessTools.TypeByName("HotPotHouse.NameTag");
+        return nameTag == null ? null : AccessTools.Method(nameTag, "LateUpdate");
+    }
+
+    private static bool Prefix(Component __instance)
+    {
+        if (__instance == null)
+            return true;
+
+        bool isOrder = AccessTools.Field(__instance.GetType(), "isOrderLabel")?.GetValue(__instance) as bool? ?? false;
+        bool hide = isOrder && Main.Hide(Main.HideSharedOrderLabels);
+        if (!isOrder)
         {
-            if (string.Equals(content, "Side Dishes", StringComparison.OrdinalIgnoreCase))
-                hide = Main.Hide(Main.HideSideDishRackLabel);
-            else if (PotRackLabels.Contains(content))
-                hide = Main.Hide(Main.HidePotRackLabels);
-            else
-                hide = Main.Hide(Main.HideIngredientProviderLabels);
-        }
-        else
-        {
-            bool isPotOrBroth = content.IndexOf("pot", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                                content.IndexOf("broth", StringComparison.OrdinalIgnoreCase) >= 0;
-            hide = Main.Hide(isPotOrBroth ? Main.HidePotItemLabels : Main.HideRegularItemLabels);
+            Component marker = __instance.GetComponentsInParent<Component>(true)
+                .FirstOrDefault(component => component != null && component.GetType().FullName == "HotPotHouse.ItemNameTag");
+            if (marker == null)
+                return true;
+            string content = AccessTools.Field(marker.GetType(), "Content")?.GetValue(marker) as string ?? string.Empty;
+            hide = Main.ShouldHideHotPotHouseLabel(content, marker.GetComponentInParent<ApplianceView>() != null);
         }
 
-        return !hide;
+        if (!hide)
+            return true;
+
+        Behaviour text = AccessTools.Field(__instance.GetType(), "text")?.GetValue(__instance) as Behaviour;
+        if (text == null)
+            text = __instance.GetComponents<Component>().OfType<Behaviour>()
+                .FirstOrDefault(component => component.GetType().Namespace == "TMPro");
+        if (text != null)
+            text.enabled = false;
+        return false;
     }
 }
 
@@ -140,11 +192,18 @@ internal static class HideHotPotHouseOrderTextPatch
 }
 
 [HarmonyPatch(typeof(ItemGroupView), "PerformUpdate")]
+[HarmonyAfter("blargle.ColorblindPlus")]
+[HarmonyPriority(HarmonyLib.Priority.Last)]
 internal static class ConfigureColorblindPlusItemLabelsPatch
 {
-    private static void Postfix(ItemGroupView __instance)
+    private static void Postfix(ItemGroupView __instance, int __0)
     {
-        if (!Main.IsColorblindPlusLoaded() || !Main.Hide(Main.HideColorblindItemLabels) || __instance == null)
+        if (!Main.IsColorblindPlusLoaded() || __instance == null)
+            return;
+
+        bool hide = Main.Hide(Main.HideColorblindItemLabels, false) ||
+                    (Main.Hide(Main.HideColorblindDirtySideDishLabel) && Main.IsHotPotHouseDirtySideDish(__0));
+        if (!hide)
             return;
 
         Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
