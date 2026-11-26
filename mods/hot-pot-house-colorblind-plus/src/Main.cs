@@ -34,7 +34,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.3.0",
+        "1.3.1",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -69,7 +69,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.0 loaded with persistent Hot Pot House text suppression and per-mod controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.1 loaded with persistent text suppression, served-bowl cleanup and per-mod controls.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -110,6 +110,19 @@ public sealed class Main : BaseMod
         {
             return false;
         }
+    }
+
+    internal static bool IsServedHotPotBowlVisual(Component component)
+    {
+        for (Transform current = component?.transform; current != null; current = current.parent)
+        {
+            string objectName = current.name ?? string.Empty;
+            if (objectName.StartsWith("Hot Pot Guest Soup Bowl", StringComparison.Ordinal) ||
+                objectName.StartsWith("Hot Pot Guest Bowls ", StringComparison.Ordinal) ||
+                string.Equals(objectName, "Served Hot Pot Contents", StringComparison.Ordinal))
+                return true;
+        }
+        return false;
     }
 }
 
@@ -155,8 +168,9 @@ internal static class PersistentlySuppressHotPotHouseLabelsPatch
             return true;
 
         bool isOrder = AccessTools.Field(__instance.GetType(), "isOrderLabel")?.GetValue(__instance) as bool? ?? false;
-        bool hide = isOrder && Main.Hide(Main.HideSharedOrderLabels);
-        if (!isOrder)
+        bool hide = Main.IsServedHotPotBowlVisual(__instance) ||
+                    (isOrder && Main.Hide(Main.HideSharedOrderLabels));
+        if (!hide && !isOrder)
         {
             Component marker = __instance.GetComponentsInParent<Component>(true)
                 .FirstOrDefault(component => component != null && component.GetType().FullName == "HotPotHouse.ItemNameTag");
@@ -169,12 +183,9 @@ internal static class PersistentlySuppressHotPotHouseLabelsPatch
         if (!hide)
             return true;
 
-        Behaviour text = AccessTools.Field(__instance.GetType(), "text")?.GetValue(__instance) as Behaviour;
-        if (text == null)
-            text = __instance.GetComponents<Component>().OfType<Behaviour>()
-                .FirstOrDefault(component => component.GetType().Namespace == "TMPro");
-        if (text != null)
-            text.enabled = false;
+        // Disable the label root, not only the renderer. HPH LateUpdate and
+        // pooled request holders can otherwise re-enable or move the text.
+        __instance.gameObject.SetActive(false);
         return false;
     }
 }
@@ -201,7 +212,8 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
         if (!Main.IsColorblindPlusLoaded() || __instance == null)
             return;
 
-        bool hide = Main.Hide(Main.HideColorblindItemLabels, false) ||
+        bool hide = Main.IsServedHotPotBowlVisual(__instance) ||
+                    Main.Hide(Main.HideColorblindItemLabels, false) ||
                     (Main.Hide(Main.HideColorblindDirtySideDishLabel) && Main.IsHotPotHouseDirtySideDish(__0));
         if (!hide)
             return;
