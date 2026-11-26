@@ -36,7 +36,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.1",
+        "1.7.2",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -76,7 +76,7 @@ public sealed class Main : BaseMod
             .AddOption<bool>(HideServedSoupBowlLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Dirty item text")
             .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
-            .AddInfo("Controls Dirty text for vanilla and Hot Pot House plates, dishes and pots.")
+            .AddInfo("Controls Colorblind+ Dirty text. The smaller duplicate HPH text stays hidden.")
             .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
@@ -95,7 +95,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.1 loaded with separate soup-bowl and all-dirty-item text controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.2 loaded with direct Colorblind+ Dirty label control.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -130,7 +130,7 @@ public sealed class Main : BaseMod
         // ApplianceView from the appliance. It is still an item label, not a
         // provider label, so recognise it before checking isProvider.
         if (content.StartsWith("Dirty", StringComparison.OrdinalIgnoreCase))
-            return Hide(HideColorblindDirtySideDishLabel);
+            return IsColorblindPlusLoaded() || Hide(HideColorblindDirtySideDishLabel);
 
         if (isProvider)
         {
@@ -158,6 +158,21 @@ public sealed class Main : BaseMod
             GameObject prefab = GameData.Main.GetPrefab(itemId);
             string prefabName = prefab?.name ?? string.Empty;
             return prefabName.IndexOf("dirty", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    internal static bool IsDirtyTextLabel(Component label)
+    {
+        if (label == null)
+            return false;
+        try
+        {
+            string text = AccessTools.Property(label.GetType(), "text")?.GetValue(label, null) as string ?? string.Empty;
+            return text.IndexOf("Dirty", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
         {
@@ -380,12 +395,12 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
     {
         if (!Main.IsColorblindPlusLoaded() || instance == null)
             return;
-        bool dirtyItem = Main.IsDirtyItem(itemId);
+        Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
+            ?.GetValue(instance) as Component;
+        bool dirtyItem = Main.IsDirtyItem(itemId) || Main.IsDirtyTextLabel(label);
         bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(instance)) ||
                     Main.Hide(Main.HideColorblindItemLabels, false) ||
                     (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtyItem);
-        Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
-            ?.GetValue(instance) as Component;
 
         if (hide)
         {

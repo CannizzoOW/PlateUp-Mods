@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.1.
+Version 1.7.2.
+
+Dirty text is now detected directly from Colorblind+'s rendered label. The
+menu controls that label, while Hot Pot House's smaller duplicate Dirty label
+remains suppressed in both menu states.
 
 The Dirty item text option now covers vanilla dirty plates and pots as well as
 Hot Pot House dishes, including items held inside dishwashers and washbasins.
