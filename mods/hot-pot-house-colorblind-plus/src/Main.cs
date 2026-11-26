@@ -27,14 +27,14 @@ public sealed class Main : BaseMod
     internal const string HideCountUpProviderLabels = "CountUp! provider counters";
     internal const string HideCountUpItemLabels = "CountUp! item portion and process labels";
     private static readonly bool[] ToggleValues = { false, true };
-    private static readonly string[] ToggleNames = { "Show", "Hide" };
+    private static readonly string[] ToggleNames = { "Show text", "Hide text" };
     private static PreferenceSystemManager preferences;
 
     public Main() : base(
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.3.5",
+        "1.4.0",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -46,36 +46,49 @@ public sealed class Main : BaseMod
 
         preferences = new PreferenceSystemManager(ModId, "Text Display Controls")
             .AddSubmenu("Hot Pot House", "HotPotHouse")
-            .AddLabel("Items")
+            .AddInfo("Controls text created by Hot Pot House. Fully restart PlateUp after changing an option.")
+            .AddSubmenu("Items", "HotPotHouseItems")
+            .AddLabel("Regular item names")
             .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames)
+            .AddLabel("Pot and broth names")
             .AddOption<bool>(HidePotItemLabels, true, ToggleValues, ToggleNames)
-            .AddLabel("Providers")
+            .SubmenuDone()
+            .AddSubmenu("Providers", "HotPotHouseProviders")
+            .AddLabel("Ingredient provider names")
             .AddOption<bool>(HideIngredientProviderLabels, true, ToggleValues, ToggleNames)
+            .AddLabel("Hot-pot rack names")
             .AddOption<bool>(HidePotRackLabels, true, ToggleValues, ToggleNames)
+            .AddLabel("Side-dish rack name")
             .AddOption<bool>(HideSideDishRackLabel, true, ToggleValues, ToggleNames)
-            .AddLabel("Orders")
+            .SubmenuDone()
+            .AddSubmenu("Orders", "HotPotHouseOrders")
+            .AddLabel("Shared hot-pot order text")
             .AddOption<bool>(HideSharedOrderLabels, true, ToggleValues, ToggleNames)
             .SubmenuDone()
+            .SubmenuDone()
             .AddSubmenu("Colorblind+", "ColorblindPlus")
-            .AddLabel("Item text")
+            .AddInfo("Controls text created by Colorblind+. Fully restart PlateUp after changing an option.")
+            .AddLabel("All Colorblind+ item text")
             .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames)
+            .AddLabel("Dirty HPH side-dish text only")
             .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames)
-            .AddInfo("Controls labels owned by Colorblind+. Its own detailed dish and font settings remain available in the Colorblind+ menu.")
+            .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
-            .AddLabel("Provider text")
+            .AddInfo("Controls text created by CountUp!. Fully restart PlateUp after changing an option.")
+            .AddLabel("Provider stock counters")
             .AddOption<bool>(HideCountUpProviderLabels, false, ToggleValues, ToggleNames)
-            .AddLabel("Item text")
+            .AddLabel("Item portion and process text")
             .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames)
             .SubmenuDone()
-            .AddInfo("Text controls are grouped by the mod that creates them. Changes take effect after restarting PlateUp.");
+            .AddInfo("Choose the mod that creates the text you want to control. A full PlateUp restart is required after changes.");
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)0);
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)1);
     }
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.3.5 loaded with single-registration menus and dirty-side-dish suppression.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.4.0 loaded with labelled text-control menus and dirty-side-dish suppression.");
     }
 
     internal static bool IsColorblindPlusLoaded()
