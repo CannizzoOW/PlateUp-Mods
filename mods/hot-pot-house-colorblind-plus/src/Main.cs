@@ -38,7 +38,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.8.1",
+        "1.8.2",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -97,7 +97,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.1 loaded without synchronous global preference refreshes.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.2 loaded with served-order text scope tracking.");
     }
 
     private static void OnHotPotHousePreferenceChanged(bool value)
@@ -492,6 +492,7 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 internal static class ConfigureServedSoupBowlLabelsPatch
 {
     private static readonly HashSet<GameObject> TrackedRoots = new HashSet<GameObject>();
+    private static readonly Dictionary<GameObject, HashSet<GameObject>> HiddenTextByRoot = new Dictionary<GameObject, HashSet<GameObject>>();
     private static readonly FieldInfo DrawnItemsField = AccessTools.Field(typeof(ItemCollectionView), "DrawnItems");
 
     private static MethodBase TargetMethod()
@@ -510,7 +511,12 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         {
             GameObject bowl = drawnItems[__1].Item;
             if (bowl != null && bowl.name.StartsWith("Hot Pot Guest Soup Bowl", StringComparison.Ordinal))
+            {
+                // HPH and Colorblind+ can place served-item text beside the
+                // bowl under the order view rather than below the bowl mesh.
+                TrackRoot(__0.gameObject);
                 TrackRoot(bowl);
+            }
         }
 
         string holderName = $"Hot Pot Guest Bowls {Mathf.RoundToInt(__2.TablePosition.x * 10f)}_{Mathf.RoundToInt(__2.TablePosition.z * 10f)}";
@@ -546,18 +552,35 @@ internal static class ConfigureServedSoupBowlLabelsPatch
     {
         if (root == null)
             return;
+        if (visible)
+        {
+            if (!HiddenTextByRoot.TryGetValue(root, out HashSet<GameObject> restore))
+                return;
+            foreach (GameObject textObject in restore)
+                if (textObject != null)
+                    textObject.SetActive(true);
+            HiddenTextByRoot.Remove(root);
+            return;
+        }
+
+        if (!HiddenTextByRoot.TryGetValue(root, out HashSet<GameObject> hidden))
+            HiddenTextByRoot[root] = hidden = new HashSet<GameObject>();
         foreach (Component component in root.GetComponentsInChildren<Component>(true))
         {
-            if (component == null || component.GetType().Namespace != "TMPro")
+            if (component == null || component.GetType().Namespace != "TMPro" || !component.gameObject.activeSelf)
                 continue;
-            component.gameObject.SetActive(visible);
+            hidden.Add(component.gameObject);
+            component.gameObject.SetActive(false);
         }
     }
 
     internal static void Untrack(GameObject root)
     {
         if (root != null)
+        {
             TrackedRoots.Remove(root);
+            HiddenTextByRoot.Remove(root);
+        }
     }
 }
 

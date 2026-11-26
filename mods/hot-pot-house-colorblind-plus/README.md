@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.8.1.
+Version 1.8.2.
+
+Served bowl text suppression now includes the completed order view because HPH
+and Colorblind+ can place labels beside the bowl rather than beneath its mesh.
+Only text objects disabled by this mod are restored by Show text.
 
 Preference changes no longer run synchronous global refreshes. Bowl roots
 unregister themselves on destruction, so soup text toggles touch only bowls
