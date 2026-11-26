@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.6.0.
+Version 1.6.1.
+
+Dirty Hot Pot House side dishes are now recognised inside dishwashers and
+washbasins as well as on counters. The single dirty-text option controls both
+Colorblind+ text and Hot Pot House's original smaller label.
 
 CountUp! provider counters are now split into separate controls for ingredient
 providers and other providers such as plate, dish and pot racks. Live toggles

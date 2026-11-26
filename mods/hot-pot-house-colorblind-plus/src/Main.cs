@@ -35,7 +35,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.6.0",
+        "1.6.1",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -71,8 +71,9 @@ public sealed class Main : BaseMod
             .AddInfo("Controls text created by Colorblind+. Changes apply immediately.")
             .AddLabel("All Colorblind+ item text")
             .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
-            .AddLabel("Dirty HPH side-dish text only")
+            .AddLabel("All dirty HPH side-dish text")
             .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
+            .AddInfo("Controls both Colorblind+ and the original Hot Pot House Dirty text.")
             .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
@@ -91,7 +92,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.6.0 loaded with live text controls and split CountUp provider controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.6.1 loaded with live text controls and split CountUp provider controls.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -121,9 +122,11 @@ public sealed class Main : BaseMod
 
     internal static bool ShouldHideHotPotHouseLabel(string content, bool isProvider)
     {
-        if (!isProvider &&
-            (string.Equals(content, "Dirty", StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(content, "Dirty Side Dish", StringComparison.OrdinalIgnoreCase)))
+        // A dirty side dish inside a dishwasher or washbasin inherits an
+        // ApplianceView from the appliance. It is still an item label, not a
+        // provider label, so recognise it before checking isProvider.
+        if (string.Equals(content, "Dirty", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(content, "Dirty Side Dish", StringComparison.OrdinalIgnoreCase))
             return Hide(HideColorblindDirtySideDishLabel);
 
         if (isProvider)
