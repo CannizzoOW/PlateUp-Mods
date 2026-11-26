@@ -30,13 +30,15 @@ public sealed class Main : BaseMod
     internal const string HideCountUpItemLabels = "CountUp! item portion and process labels";
     private static readonly bool[] ToggleValues = { false, true };
     private static readonly string[] ToggleNames = { "Show text", "Hide text" };
+    private static readonly Dictionary<int, bool> DirtyItemCache = new Dictionary<int, bool>();
+    private static bool colorblindPlusLoaded;
     private static PreferenceSystemManager preferences;
 
     public Main() : base(
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.4",
+        "1.7.5",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -95,7 +97,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.4 loaded with one-time soup-bowl text updates.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.5 loaded with cached item and typed label lookups.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -115,8 +117,11 @@ public sealed class Main : BaseMod
 
     internal static bool IsColorblindPlusLoaded()
     {
-        return AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
+        if (colorblindPlusLoaded)
+            return true;
+        colorblindPlusLoaded = AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
             (assembly.GetName().Name ?? string.Empty).StartsWith("Colorblind", StringComparison.OrdinalIgnoreCase));
+        return colorblindPlusLoaded;
     }
 
     internal static bool Hide(string key, bool fallback = true)
@@ -148,20 +153,22 @@ public sealed class Main : BaseMod
 
     internal static bool IsDirtyItem(int itemId)
     {
+        if (DirtyItemCache.TryGetValue(itemId, out bool cached))
+            return cached;
         try
         {
             Item item = GameData.Main.Get<Item>(itemId);
             string itemName = item?.name ?? string.Empty;
             if (itemName.IndexOf("dirty", StringComparison.OrdinalIgnoreCase) >= 0)
-                return true;
+                return DirtyItemCache[itemId] = true;
 
             GameObject prefab = GameData.Main.GetPrefab(itemId);
             string prefabName = prefab?.name ?? string.Empty;
-            return prefabName.IndexOf("dirty", StringComparison.OrdinalIgnoreCase) >= 0;
+            return DirtyItemCache[itemId] = prefabName.IndexOf("dirty", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
         {
-            return false;
+            return DirtyItemCache[itemId] = false;
         }
     }
 
@@ -216,16 +223,13 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
             return true;
 
         string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
-        bool isProvider = __instance.GetComponentInParent<ApplianceView>() != null;
+        bool isProvider = __instance.GetComponentInParent<ItemGroupView>() == null &&
+                          __instance.GetComponentInParent<ApplianceView>() != null;
         bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(__instance)) ||
                     Main.ShouldHideHotPotHouseLabel(content, isProvider);
 
-        Transform scope = isProvider
-            ? __instance.GetComponentInParent<ApplianceView>().transform
-            : __instance.transform;
-        List<Component> existingTags = scope.GetComponentsInChildren<Component>(true)
-            .Where(component => component != null && component.GetType().FullName == "HotPotHouse.NameTag")
-            .ToList();
+        Transform scope = __instance.transform;
+        List<Component> existingTags = GetNameTags(scope);
 
         if (hide)
         {
@@ -265,12 +269,11 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
             marker.gameObject.SetActive(true);
             string content = AccessTools.Field(markerType, "Content")?.GetValue(marker) as string ?? string.Empty;
             ApplianceView appliance = marker.GetComponentInParent<ApplianceView>();
+            bool isProvider = marker.GetComponentInParent<ItemGroupView>() == null && appliance != null;
             bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(marker)) ||
-                        Main.ShouldHideHotPotHouseLabel(content, appliance != null);
-            Transform scope = appliance != null ? appliance.transform : marker.transform;
-            List<Component> tags = scope.GetComponentsInChildren<Component>(true)
-                .Where(component => component != null && component.GetType().FullName == "HotPotHouse.NameTag")
-                .ToList();
+                        Main.ShouldHideHotPotHouseLabel(content, isProvider);
+            Transform scope = marker.transform;
+            List<Component> tags = GetNameTags(scope);
 
             if (hide)
             {
@@ -297,6 +300,14 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
             }
         }
     }
+
+    private static List<Component> GetNameTags(Transform scope)
+    {
+        Type nameTagType = AccessTools.TypeByName("HotPotHouse.NameTag");
+        return scope == null || nameTagType == null
+            ? new List<Component>()
+            : scope.GetComponentsInChildren(nameTagType, true).OfType<Component>().ToList();
+    }
 }
 
 [HarmonyPatch]
@@ -318,12 +329,15 @@ internal static class PersistentlySuppressHotPotHouseLabelsPatch
                     (isOrder && Main.Hide(Main.HideSharedOrderLabels));
         if (!hide && !isOrder)
         {
-            Component marker = __instance.GetComponentsInParent<Component>(true)
-                .FirstOrDefault(component => component != null && component.GetType().FullName == "HotPotHouse.ItemNameTag");
+            Type markerType = AccessTools.TypeByName("HotPotHouse.ItemNameTag");
+            Component marker = markerType == null ? null : __instance.GetComponentsInParent(markerType, true)
+                .OfType<Component>().FirstOrDefault();
             if (marker == null)
                 return true;
             string content = AccessTools.Field(marker.GetType(), "Content")?.GetValue(marker) as string ?? string.Empty;
-            hide = Main.ShouldHideHotPotHouseLabel(content, marker.GetComponentInParent<ApplianceView>() != null);
+            bool isProvider = marker.GetComponentInParent<ItemGroupView>() == null &&
+                              marker.GetComponentInParent<ApplianceView>() != null;
+            hide = Main.ShouldHideHotPotHouseLabel(content, isProvider);
         }
 
         if (!hide)

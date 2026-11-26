@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.14.
+Version 2.4.15.
+
+- Builds served hot-pot/dip contents once and clones the prepared bowl for additional guests, substantially reducing delivery hitches.
 
 - Claims one visual owner per completed table order and normalises seat height before deduplication, guaranteeing at most one bowl per guest.
 

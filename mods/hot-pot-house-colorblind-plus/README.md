@@ -1,6 +1,9 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.4.
+Version 1.7.5.
+
+Dirty-item detection is cached, and HPH label handling now uses typed searches
+within the specific item marker instead of broad appliance component scans.
 
 Each generated bowl and bowl holder is processed once for text suppression,
 removing the remaining per-update traversal while food stays on the table.

@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.14",
+            "2.4.15",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.14 loaded; shared-pot bowls are deduplicated per table and guest.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.15 loaded; shared-pot contents are built once and cloned per guest.");
     }
 }
 
@@ -630,7 +630,7 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
 
         drawn.Item = bowl;
         drawnItems[index] = drawn;
-        CreateBowlsForOtherGuests(instance, itemInfo, template);
+        CreateBowlsForOtherGuests(instance, itemInfo, bowl);
     }
 
     private static bool ClaimHasActiveBowl(BowlClaim claim)
@@ -648,7 +648,7 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
     private static void CreateBowlsForOtherGuests(
         ItemCollectionView view,
         ItemCollectionView.ItemData itemInfo,
-        GameObject template)
+        GameObject preparedBowl)
     {
         string holderName = $"Hot Pot Guest Bowls {indexFor(itemInfo)}";
         Transform previous = view.transform.Find(holderName);
@@ -682,17 +682,16 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
                 continue;
 
             occupied.Add(seat);
-            GameObject extra = UnityEngine.Object.Instantiate(template, holder.transform, false);
+            // Clone the already-filled primary bowl. Rebuilding the complete
+            // pot prefab, item view, bounds and materials for every guest was
+            // the main delivery hitch for hot pots and dips.
+            GameObject extra = UnityEngine.Object.Instantiate(preparedBowl, holder.transform, false);
             extra.name = "Hot Pot Guest Soup Bowl Extra";
             extra.transform.position = seat * 0.4f + table * 0.6f;
             extra.transform.position = new Vector3(extra.transform.position.x, 0.5f, extra.transform.position.z);
             extra.transform.rotation = Quaternion.LookRotation(horizontal, Vector3.up);
             extra.transform.localScale = new Vector3(0.8f, 0.8f, 0.8f);
             extra.SetActive(true);
-            FillBowlFromServedPot(extra, itemInfo);
-            foreach (Renderer renderer in extra.GetComponentsInChildren<Renderer>(true))
-                foreach (Material material in renderer.materials)
-                    material.SetInt("_IsAlwaysInside", 1);
             created++;
         }
 
