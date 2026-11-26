@@ -36,7 +36,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.2",
+        "1.7.3",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -95,7 +95,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.2 loaded with direct Colorblind+ Dirty label control.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.3 loaded with targeted soup-bowl text updates.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -471,9 +471,10 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         return bowlsPatch == null ? null : AccessTools.Method(bowlsPatch, "ReplaceCompletedItem");
     }
 
-    private static void Postfix()
+    private static void Postfix(ItemCollectionView __0)
     {
-        RefreshExisting();
+        if (Main.Hide(Main.HideServedSoupBowlLabels) && __0 != null)
+            HideTextInScope(__0.transform);
     }
 
     internal static void RefreshExisting()
@@ -488,23 +489,24 @@ internal static class ConfigureServedSoupBowlLabelsPatch
             return;
         }
 
-        // The generated bowl contents can create their text after the normal
-        // ItemGroupView update. Sweep every served-bowl hierarchy whenever a
-        // bowl is created or the preference changes.
-        foreach (Transform transform in Resources.FindObjectsOfTypeAll<Transform>())
-        {
-            if (transform == null || !transform.gameObject.scene.IsValid() ||
-                !Main.IsServedHotPotBowlVisual(transform))
-                continue;
+        // Menu changes are rare, so refresh each order view once. Hot-pot
+        // delivery itself uses only the single affected view in Postfix.
+        foreach (ItemCollectionView view in Resources.FindObjectsOfTypeAll<ItemCollectionView>())
+            if (view != null && view.gameObject.scene.IsValid())
+                HideTextInScope(view.transform);
+    }
 
-            foreach (Component component in transform.GetComponentsInChildren<Component>(true))
-            {
-                if (component == null || component.GetType().Namespace != "TMPro" ||
-                    !component.gameObject.activeSelf)
-                    continue;
-                HiddenTextObjects.Add(component.gameObject);
-                component.gameObject.SetActive(false);
-            }
+    private static void HideTextInScope(Transform scope)
+    {
+        if (scope == null)
+            return;
+        foreach (Component component in scope.GetComponentsInChildren<Component>(true))
+        {
+            if (component == null || component.GetType().Namespace != "TMPro" ||
+                !component.gameObject.activeSelf || !Main.IsServedHotPotBowlVisual(component))
+                continue;
+            HiddenTextObjects.Add(component.gameObject);
+            component.gameObject.SetActive(false);
         }
     }
 }

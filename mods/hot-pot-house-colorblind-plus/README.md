@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.2.
+Version 1.7.3.
+
+Hot-pot delivery no longer scans every transform in the restaurant. Soup-bowl
+text cleanup is restricted to the single affected order view, removing the
+severe delivery hitch in large restaurants.
 
 Dirty text is now detected directly from Colorblind+'s rendered label. The
 menu controls that label, while Hot Pot House's smaller duplicate Dirty label
