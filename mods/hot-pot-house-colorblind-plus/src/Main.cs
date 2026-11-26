@@ -34,7 +34,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.4.0",
+        "1.5.0",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -46,49 +46,63 @@ public sealed class Main : BaseMod
 
         preferences = new PreferenceSystemManager(ModId, "Text Display Controls")
             .AddSubmenu("Hot Pot House", "HotPotHouse")
-            .AddInfo("Controls text created by Hot Pot House. Fully restart PlateUp after changing an option.")
+            .AddInfo("Controls text created by Hot Pot House. Changes apply immediately.")
             .AddSubmenu("Items", "HotPotHouseItems")
             .AddLabel("Regular item names")
-            .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideRegularItemLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Pot and broth names")
-            .AddOption<bool>(HidePotItemLabels, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HidePotItemLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .SubmenuDone()
             .AddSubmenu("Providers", "HotPotHouseProviders")
             .AddLabel("Ingredient provider names")
-            .AddOption<bool>(HideIngredientProviderLabels, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideIngredientProviderLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Hot-pot rack names")
-            .AddOption<bool>(HidePotRackLabels, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HidePotRackLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Side-dish rack name")
-            .AddOption<bool>(HideSideDishRackLabel, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideSideDishRackLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .SubmenuDone()
             .AddSubmenu("Orders", "HotPotHouseOrders")
             .AddLabel("Shared hot-pot order text")
-            .AddOption<bool>(HideSharedOrderLabels, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideSharedOrderLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .SubmenuDone()
             .SubmenuDone()
             .AddSubmenu("Colorblind+", "ColorblindPlus")
-            .AddInfo("Controls text created by Colorblind+. Fully restart PlateUp after changing an option.")
+            .AddInfo("Controls text created by Colorblind+. Changes apply immediately.")
             .AddLabel("All Colorblind+ item text")
-            .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Dirty HPH side-dish text only")
-            .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
-            .AddInfo("Controls text created by CountUp!. Fully restart PlateUp after changing an option.")
+            .AddInfo("Controls text created by CountUp!. Changes apply immediately.")
             .AddLabel("Provider stock counters")
-            .AddOption<bool>(HideCountUpProviderLabels, false, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideCountUpProviderLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Item portion and process text")
-            .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames)
+            .AddOption<bool>(HideCountUpItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .SubmenuDone()
-            .AddInfo("Choose the mod that creates the text you want to control. A full PlateUp restart is required after changes.");
+            .AddInfo("Choose the mod that creates the text you want to control. Changes apply immediately.");
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)0);
         preferences.RegisterMenu((PreferenceSystemManager.MenuType)1);
     }
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.4.0 loaded with labelled text-control menus and dirty-side-dish suppression.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.5.0 loaded with live text controls and dirty-side-dish suppression.");
+    }
+
+    private static void OnTextPreferenceChanged(bool value)
+    {
+        RefreshLiveText();
+    }
+
+    internal static void RefreshLiveText()
+    {
+        ConfigureHotPotHouseItemAndProviderLabelsPatch.RefreshExisting();
+        PersistentlySuppressHotPotHouseLabelsPatch.RefreshExisting();
+        ConfigureColorblindPlusItemLabelsPatch.RefreshExisting();
+        ConfigureCountUpProviderLabelsPatch.RefreshExisting();
+        ConfigureCountUpItemLabelsPatch.RefreshExisting();
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -194,9 +208,8 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
         {
             foreach (Component tag in existingTags)
                 tag.gameObject.SetActive(false);
-            // The marker itself is the factory. Disabling only its output lets
-            // rebuilt provider views create another label later.
-            __instance.gameObject.SetActive(false);
+            if (__instance is Behaviour hiddenMarker)
+                hiddenMarker.enabled = false;
             return false;
         }
 
@@ -211,6 +224,55 @@ internal static class ConfigureHotPotHouseItemAndProviderLabelsPatch
         }
 
         return true;
+    }
+
+    internal static void RefreshExisting()
+    {
+        Type markerType = AccessTools.TypeByName("HotPotHouse.ItemNameTag");
+        MethodInfo start = markerType == null ? null : AccessTools.Method(markerType, "Start");
+        if (markerType == null || start == null)
+            return;
+
+        foreach (UnityEngine.Object found in Resources.FindObjectsOfTypeAll(markerType))
+        {
+            Component marker = found as Component;
+            if (marker == null || !marker.gameObject.scene.IsValid())
+                continue;
+
+            marker.gameObject.SetActive(true);
+            string content = AccessTools.Field(markerType, "Content")?.GetValue(marker) as string ?? string.Empty;
+            ApplianceView appliance = marker.GetComponentInParent<ApplianceView>();
+            bool hide = Main.IsServedHotPotBowlVisual(marker) ||
+                        Main.ShouldHideHotPotHouseLabel(content, appliance != null);
+            Transform scope = appliance != null ? appliance.transform : marker.transform;
+            List<Component> tags = scope.GetComponentsInChildren<Component>(true)
+                .Where(component => component != null && component.GetType().FullName == "HotPotHouse.NameTag")
+                .ToList();
+
+            if (hide)
+            {
+                foreach (Component tag in tags)
+                    tag.gameObject.SetActive(false);
+                if (marker is Behaviour hiddenMarker)
+                    hiddenMarker.enabled = false;
+                continue;
+            }
+
+            if (tags.Count > 0)
+            {
+                tags[0].gameObject.SetActive(true);
+                foreach (Component duplicate in tags.Skip(1))
+                    duplicate.gameObject.SetActive(false);
+                if (marker is Behaviour existingMarker)
+                    existingMarker.enabled = false;
+            }
+            else
+            {
+                if (marker is Behaviour missingMarker)
+                    missingMarker.enabled = true;
+                start.Invoke(marker, null);
+            }
+        }
     }
 }
 
@@ -249,6 +311,27 @@ internal static class PersistentlySuppressHotPotHouseLabelsPatch
         __instance.gameObject.SetActive(false);
         return false;
     }
+
+    internal static void RefreshExisting()
+    {
+        Type nameTagType = AccessTools.TypeByName("HotPotHouse.NameTag");
+        if (nameTagType == null)
+            return;
+        foreach (UnityEngine.Object found in Resources.FindObjectsOfTypeAll(nameTagType))
+        {
+            Component tag = found as Component;
+            if (tag == null || !tag.gameObject.scene.IsValid())
+                continue;
+            if (Main.IsServedHotPotBowlVisual(tag))
+            {
+                tag.gameObject.SetActive(false);
+                continue;
+            }
+            bool isOrder = AccessTools.Field(nameTagType, "isOrderLabel")?.GetValue(tag) as bool? ?? false;
+            if (isOrder)
+                tag.gameObject.SetActive(!Main.Hide(Main.HideSharedOrderLabels));
+        }
+    }
 }
 
 [HarmonyPatch]
@@ -260,7 +343,12 @@ internal static class HideHotPotHouseOrderTextPatch
         return nameTag == null ? null : AccessTools.Method(nameTag, "ForOrder");
     }
 
-    private static bool Prefix() => !Main.Hide(Main.HideSharedOrderLabels);
+    private static void Postfix()
+    {
+        // Always let HPH create the order label, then hide it when requested.
+        // Keeping the inactive object makes Show text reversible immediately.
+        PersistentlySuppressHotPotHouseLabelsPatch.RefreshExisting();
+    }
 }
 
 [HarmonyPatch(typeof(ItemGroupView), "PerformUpdate")]
@@ -268,34 +356,52 @@ internal static class HideHotPotHouseOrderTextPatch
 [HarmonyPriority(HarmonyLib.Priority.Last)]
 internal static class ConfigureColorblindPlusItemLabelsPatch
 {
+    private static readonly Dictionary<ItemGroupView, int> KnownViews = new Dictionary<ItemGroupView, int>();
+
     private static void Postfix(ItemGroupView __instance, int __0)
     {
-        if (!Main.IsColorblindPlusLoaded() || __instance == null)
+        if (__instance == null)
             return;
+        KnownViews[__instance] = __0;
+        Apply(__instance, __0);
+    }
 
-        bool hide = Main.IsServedHotPotBowlVisual(__instance) ||
+    private static void Apply(ItemGroupView instance, int itemId)
+    {
+        if (!Main.IsColorblindPlusLoaded() || instance == null)
+            return;
+        bool dirtySideDish = Main.IsHotPotHouseDirtySideDish(itemId);
+        bool hide = Main.IsServedHotPotBowlVisual(instance) ||
                     Main.Hide(Main.HideColorblindItemLabels, false) ||
-                    (Main.Hide(Main.HideColorblindDirtySideDishLabel) && Main.IsHotPotHouseDirtySideDish(__0));
-        if (!hide)
-            return;
-
-        __instance.ForceNoColourblind = true;
+                    (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtySideDish);
+        instance.ForceNoColourblind = hide;
 
         Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
-            ?.GetValue(__instance) as Component;
+            ?.GetValue(instance) as Component;
         if (label != null)
-            label.gameObject.SetActive(false);
+            label.gameObject.SetActive(!hide);
 
         // Colorblind+ can populate additional TMP children rather than the
         // single vanilla ColourblindLabel field. Disable every text renderer
         // on this specific dirty HPH item view so none can retain "Dirty".
-        if (Main.IsHotPotHouseDirtySideDish(__0))
+        if (dirtySideDish || Main.Hide(Main.HideColorblindItemLabels, false))
         {
-            foreach (Component component in __instance.GetComponentsInChildren<Component>(true))
+            foreach (Component component in instance.GetComponentsInChildren<Component>(true))
             {
                 if (component != null && component.GetType().Namespace == "TMPro")
-                    component.gameObject.SetActive(false);
+                    component.gameObject.SetActive(!hide);
             }
+        }
+    }
+
+    internal static void RefreshExisting()
+    {
+        foreach (KeyValuePair<ItemGroupView, int> entry in KnownViews.ToArray())
+        {
+            if (entry.Key == null)
+                KnownViews.Remove(entry.Key);
+            else
+                Apply(entry.Key, entry.Value);
         }
     }
 }
@@ -315,12 +421,27 @@ internal static class ConfigureCountUpProviderLabelsPatch
 
     private static void Postfix(object __instance)
     {
-        if (!Main.Hide(Main.HideCountUpProviderLabels) || __instance == null)
+        Apply(__instance);
+    }
+
+    private static void Apply(object instance)
+    {
+        if (instance == null)
             return;
-        Component countText = AccessTools.Field(__instance.GetType(), "CountText")
-            ?.GetValue(__instance) as Component;
+        Component countText = AccessTools.Field(instance.GetType(), "CountText")
+            ?.GetValue(instance) as Component;
         if (countText != null)
-            countText.gameObject.SetActive(false);
+            countText.gameObject.SetActive(!Main.Hide(Main.HideCountUpProviderLabels, false));
+    }
+
+    internal static void RefreshExisting()
+    {
+        Type viewType = AccessTools.TypeByName("KitchenCountUp.Views.ApplianceCountView");
+        if (viewType == null)
+            return;
+        foreach (UnityEngine.Object found in Resources.FindObjectsOfTypeAll(viewType))
+            if (found is Component component && component.gameObject.scene.IsValid())
+                Apply(component);
     }
 }
 
@@ -339,12 +460,27 @@ internal static class ConfigureCountUpItemLabelsPatch
 
     private static void Postfix(object __instance)
     {
-        if (!Main.Hide(Main.HideCountUpItemLabels) || __instance == null)
+        Apply(__instance);
+    }
+
+    private static void Apply(object instance)
+    {
+        if (instance == null)
             return;
-        Component processIcons = AccessTools.Field(__instance.GetType(), "ProcessIcons")
-            ?.GetValue(__instance) as Component;
+        Component processIcons = AccessTools.Field(instance.GetType(), "ProcessIcons")
+            ?.GetValue(instance) as Component;
         if (processIcons != null)
-            processIcons.gameObject.SetActive(false);
+            processIcons.gameObject.SetActive(!Main.Hide(Main.HideCountUpItemLabels, false));
+    }
+
+    internal static void RefreshExisting()
+    {
+        Type viewType = AccessTools.TypeByName("KitchenCountUp.Views.ItemIconView");
+        if (viewType == null)
+            return;
+        foreach (UnityEngine.Object found in Resources.FindObjectsOfTypeAll(viewType))
+            if (found is Component component && component.gameObject.scene.IsValid())
+                Apply(component);
     }
 }
 

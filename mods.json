@@ -19,11 +19,11 @@
     {
       "id": "hot-pot-house-colorblind-plus",
       "name": "Hot Pot House - Colorblind+ Compatibility",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "folder": "HotPotHouseColorblindPlus",
       "fileName": "HotPotHouseColorblindPlus.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-colorblind-plus/dist/HotPotHouseColorblindPlus.dll",
-      "sha256": "c7373746f9587755950fbd0c5d0189721582db035e3c6f5787ab622994455f9a",
+      "sha256": "fef74f8a94423289ef729411d3da7be92d8bc092ffb63c161c3033fc1c992f1e",
       "workshopDependencies": [
         "2898033283",
         "2898069883",
