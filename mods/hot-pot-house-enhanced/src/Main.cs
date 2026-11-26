@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.15",
+            "2.4.16",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.15 loaded; shared-pot contents are built once and cloned per guest.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.16 loaded; generated guest bowls strip inherited item labels.");
     }
 }
 
@@ -730,8 +730,21 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         if (potBase != null)
             potBase.gameObject.SetActive(false);
         foreach (Component component in contents.GetComponentsInChildren<Component>(true))
-            if (component != null && string.Equals(component.GetType().FullName, "HotPotHouse.NameTag", StringComparison.Ordinal))
+        {
+            if (component == null)
+                continue;
+            string typeName = component.GetType().FullName ?? string.Empty;
+            if (string.Equals(typeName, "HotPotHouse.NameTag", StringComparison.Ordinal) ||
+                string.Equals(typeName, "HotPotHouse.ItemNameTag", StringComparison.Ordinal) ||
+                string.Equals(component.GetType().Namespace, "TMPro", StringComparison.Ordinal))
+            {
+                if (component is Behaviour behaviour)
+                    behaviour.enabled = false;
                 component.gameObject.SetActive(false);
+            }
+            if (component is ItemGroupView itemView)
+                itemView.ForceNoColourblind = true;
+        }
         Renderer[] bowlRenderers = bowlMesh.GetComponentsInChildren<Renderer>(true);
         Renderer[] contentRenderers = contents.GetComponentsInChildren<Renderer>(true)
             .Where(renderer => renderer.gameObject.activeInHierarchy)

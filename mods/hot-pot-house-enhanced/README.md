@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.15.
+Version 2.4.16.
+
+- Strips inherited HPH ItemNameTag/NameTag and Colorblind+/TMP labels from generated guest-bowl contents, preventing labels such as `ChiNo` from appearing on bowls.
 
 - Builds served hot-pot/dip contents once and clones the prepared bowl for additional guests, substantially reducing delivery hitches.
 
