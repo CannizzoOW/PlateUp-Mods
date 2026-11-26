@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.6.1.
+Version 1.7.0.
+
+Served soup-bowl text and dirty side-dish text now have separate live menu
+controls. Soup-bowl text is also suppressed after Enhanced creates the guest
+bowls, covering labels generated after the normal item-view update.
 
 Dirty Hot Pot House side dishes are now recognised inside dishwashers and
 washbasins as well as on counters. The single dirty-text option controls both
