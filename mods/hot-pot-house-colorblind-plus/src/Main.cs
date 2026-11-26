@@ -36,7 +36,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.0",
+        "1.7.1",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -74,9 +74,9 @@ public sealed class Main : BaseMod
             .AddOption<bool>(HideColorblindItemLabels, false, ToggleValues, ToggleNames, OnTextPreferenceChanged)
             .AddLabel("Served soup bowl text")
             .AddOption<bool>(HideServedSoupBowlLabels, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
-            .AddLabel("Dirty side-dish text")
+            .AddLabel("Dirty item text")
             .AddOption<bool>(HideColorblindDirtySideDishLabel, true, ToggleValues, ToggleNames, OnTextPreferenceChanged)
-            .AddInfo("Controls both Colorblind+ and the original Hot Pot House Dirty text.")
+            .AddInfo("Controls Dirty text for vanilla and Hot Pot House plates, dishes and pots.")
             .AddInfo("Other Colorblind+ dish and font settings remain in the original Colorblind+ menu.")
             .SubmenuDone()
             .AddSubmenu("CountUp!", "CountUp")
@@ -95,7 +95,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.0 loaded with separate soup-bowl and dirty-text controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.1 loaded with separate soup-bowl and all-dirty-item text controls.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -129,8 +129,7 @@ public sealed class Main : BaseMod
         // A dirty side dish inside a dishwasher or washbasin inherits an
         // ApplianceView from the appliance. It is still an item label, not a
         // provider label, so recognise it before checking isProvider.
-        if (string.Equals(content, "Dirty", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(content, "Dirty Side Dish", StringComparison.OrdinalIgnoreCase))
+        if (content.StartsWith("Dirty", StringComparison.OrdinalIgnoreCase))
             return Hide(HideColorblindDirtySideDishLabel);
 
         if (isProvider)
@@ -147,20 +146,18 @@ public sealed class Main : BaseMod
         return Hide(isPotOrBroth ? HidePotItemLabels : HideRegularItemLabels);
     }
 
-    internal static bool IsHotPotHouseDirtySideDish(int itemId)
+    internal static bool IsDirtyItem(int itemId)
     {
         try
         {
             Item item = GameData.Main.Get<Item>(itemId);
             string itemName = item?.name ?? string.Empty;
-            if (itemName.IndexOf("hotpothouse", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                itemName.IndexOf("dirty_side_dish", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (itemName.IndexOf("dirty", StringComparison.OrdinalIgnoreCase) >= 0)
                 return true;
 
             GameObject prefab = GameData.Main.GetPrefab(itemId);
             string prefabName = prefab?.name ?? string.Empty;
-            return prefabName.IndexOf("dirty_side_dish", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                   prefabName.IndexOf("side_dish_dirty", StringComparison.OrdinalIgnoreCase) >= 0;
+            return prefabName.IndexOf("dirty", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch
         {
@@ -383,10 +380,10 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
     {
         if (!Main.IsColorblindPlusLoaded() || instance == null)
             return;
-        bool dirtySideDish = Main.IsHotPotHouseDirtySideDish(itemId);
+        bool dirtyItem = Main.IsDirtyItem(itemId);
         bool hide = (Main.Hide(Main.HideServedSoupBowlLabels) && Main.IsServedHotPotBowlVisual(instance)) ||
                     Main.Hide(Main.HideColorblindItemLabels, false) ||
-                    (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtySideDish);
+                    (Main.Hide(Main.HideColorblindDirtySideDishLabel) && dirtyItem);
         Component label = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
             ?.GetValue(instance) as Component;
 
@@ -406,7 +403,7 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 
             // Colorblind+ can populate additional TMP children rather than
             // the single vanilla ColourblindLabel field.
-            if (dirtySideDish || Main.Hide(Main.HideColorblindItemLabels, false))
+            if (dirtyItem || Main.Hide(Main.HideColorblindItemLabels, false))
             {
                 foreach (Component component in instance.GetComponentsInChildren<Component>(true))
                 {

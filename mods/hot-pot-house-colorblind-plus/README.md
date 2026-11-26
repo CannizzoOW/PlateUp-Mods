@@ -1,6 +1,9 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.0.
+Version 1.7.1.
+
+The Dirty item text option now covers vanilla dirty plates and pots as well as
+Hot Pot House dishes, including items held inside dishwashers and washbasins.
 
 Served soup-bowl text and dirty side-dish text now have separate live menu
 controls. Soup-bowl text is also suppressed after Enhanced creates the guest
