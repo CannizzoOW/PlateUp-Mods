@@ -33,7 +33,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.2.0",
+        "1.2.1",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -67,7 +67,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.2.0 loaded with per-mod text controls.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.2.1 loaded with per-mod text controls.");
     }
 
     internal static bool IsColorblindPlusLoaded()
@@ -157,10 +157,14 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 [HarmonyPatch]
 internal static class ConfigureCountUpProviderLabelsPatch
 {
-    private static MethodBase TargetMethod()
+    private static IEnumerable<MethodBase> TargetMethods()
     {
         Type view = AccessTools.TypeByName("KitchenCountUp.Views.ApplianceCountView");
-        return view == null ? null : AccessTools.Method(view, "UpdateData");
+        if (view == null)
+            yield break;
+        foreach (MethodInfo method in view.GetMethods(AccessTools.all))
+            if (method.Name == "UpdateData")
+                yield return method;
     }
 
     private static void Postfix(object __instance)
@@ -177,10 +181,14 @@ internal static class ConfigureCountUpProviderLabelsPatch
 [HarmonyPatch]
 internal static class ConfigureCountUpItemLabelsPatch
 {
-    private static MethodBase TargetMethod()
+    private static IEnumerable<MethodBase> TargetMethods()
     {
         Type view = AccessTools.TypeByName("KitchenCountUp.Views.ItemIconView");
-        return view == null ? null : AccessTools.Method(view, "UpdateData");
+        if (view == null)
+            yield break;
+        foreach (MethodInfo method in view.GetMethods(AccessTools.all))
+            if (method.Name == "UpdateData")
+                yield return method;
     }
 
     private static void Postfix(object __instance)
