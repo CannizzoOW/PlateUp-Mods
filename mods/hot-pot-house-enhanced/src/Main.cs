@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.12",
+            "2.4.13",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.12 loaded; providers, side-dish counters and dishwasher lights, pot racks and shared-pot visuals are enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.13 loaded; shared-pot guest bowls are created once per completed order.");
     }
 }
 
@@ -593,10 +593,7 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
             return;
 
         if (string.Equals(drawn.Item.name, "Hot Pot Guest Soup Bowl", StringComparison.Ordinal))
-        {
-            CreateBowlsForOtherGuests(instance, itemInfo, template);
             return;
-        }
 
         Transform parent = drawn.Item.transform.parent;
         UnityEngine.Object.Destroy(drawn.Item);
@@ -626,7 +623,12 @@ internal static class ShowCompletedSharedPotsAsSoupBowlsPatch
         string holderName = $"Hot Pot Guest Bowls {indexFor(itemInfo)}";
         Transform previous = view.transform.Find(holderName);
         if (previous != null)
+        {
+            // Destroy is deferred until the end of the frame. Disable the old
+            // holder immediately so a replaced order can never show two layers.
+            previous.gameObject.SetActive(false);
             UnityEngine.Object.Destroy(previous.gameObject);
+        }
 
         GameObject holder = new GameObject(holderName);
         holder.transform.SetParent(view.transform, false);

@@ -36,7 +36,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.7.3",
+        "1.7.4",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -95,7 +95,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.3 loaded with targeted soup-bowl text updates.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.7.4 loaded with one-time soup-bowl text updates.");
     }
 
     private static void OnTextPreferenceChanged(bool value)
@@ -464,6 +464,8 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 internal static class ConfigureServedSoupBowlLabelsPatch
 {
     private static readonly HashSet<GameObject> HiddenTextObjects = new HashSet<GameObject>();
+    private static readonly HashSet<GameObject> ProcessedRoots = new HashSet<GameObject>();
+    private static readonly FieldInfo DrawnItemsField = AccessTools.Field(typeof(ItemCollectionView), "DrawnItems");
 
     private static MethodBase TargetMethod()
     {
@@ -471,10 +473,23 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         return bowlsPatch == null ? null : AccessTools.Method(bowlsPatch, "ReplaceCompletedItem");
     }
 
-    private static void Postfix(ItemCollectionView __0)
+    private static void Postfix(ItemCollectionView __0, int __1, ItemCollectionView.ItemData __2)
     {
-        if (Main.Hide(Main.HideServedSoupBowlLabels) && __0 != null)
-            HideTextInScope(__0.transform);
+        if (!Main.Hide(Main.HideServedSoupBowlLabels) || __0 == null || DrawnItemsField == null)
+            return;
+
+        ItemCollectionView.DrawnItem[] drawnItems = DrawnItemsField.GetValue(__0) as ItemCollectionView.DrawnItem[];
+        if (drawnItems != null && __1 >= 0 && __1 < drawnItems.Length)
+        {
+            GameObject bowl = drawnItems[__1].Item;
+            if (bowl != null && bowl.name.StartsWith("Hot Pot Guest Soup Bowl", StringComparison.Ordinal))
+                HideTextInRootOnce(bowl);
+        }
+
+        string holderName = $"Hot Pot Guest Bowls {Mathf.RoundToInt(__2.TablePosition.x * 10f)}_{Mathf.RoundToInt(__2.TablePosition.z * 10f)}";
+        Transform holder = __0.transform.Find(holderName);
+        if (holder != null)
+            HideTextInRootOnce(holder.gameObject);
     }
 
     internal static void RefreshExisting()
@@ -486,6 +501,7 @@ internal static class ConfigureServedSoupBowlLabelsPatch
                 if (textObject != null)
                     textObject.SetActive(true);
             HiddenTextObjects.Clear();
+            ProcessedRoots.Clear();
             return;
         }
 
@@ -494,6 +510,19 @@ internal static class ConfigureServedSoupBowlLabelsPatch
         foreach (ItemCollectionView view in Resources.FindObjectsOfTypeAll<ItemCollectionView>())
             if (view != null && view.gameObject.scene.IsValid())
                 HideTextInScope(view.transform);
+    }
+
+    private static void HideTextInRootOnce(GameObject root)
+    {
+        if (root == null || !ProcessedRoots.Add(root))
+            return;
+        foreach (Component component in root.GetComponentsInChildren<Component>(true))
+        {
+            if (component == null || component.GetType().Namespace != "TMPro" || !component.gameObject.activeSelf)
+                continue;
+            HiddenTextObjects.Add(component.gameObject);
+            component.gameObject.SetActive(false);
+        }
     }
 
     private static void HideTextInScope(Transform scope)

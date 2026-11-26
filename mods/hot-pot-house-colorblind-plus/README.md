@@ -1,6 +1,9 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.7.3.
+Version 1.7.4.
+
+Each generated bowl and bowl holder is processed once for text suppression,
+removing the remaining per-update traversal while food stays on the table.
 
 Hot-pot delivery no longer scans every transform in the restaurant. Soup-bowl
 text cleanup is restricted to the single affected order view, removing the

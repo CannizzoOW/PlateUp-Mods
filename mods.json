@@ -4,11 +4,11 @@
     {
       "id": "hot-pot-house-enhanced",
       "name": "Hot Pot House Enhanced",
-      "version": "2.4.12",
+      "version": "2.4.13",
       "folder": "HotPotHouseEnhanced",
       "fileName": "HotPotHouseEnhanced.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-enhanced/dist/HotPotHouseEnhanced.dll",
-      "sha256": "a0fef5fdb599c03dbdc6c0d9e14a7ebfb40372fa7ee52efb0c4a6a8a4e860b52",
+      "sha256": "8cba7ac17fe1f39120c8d1eb23b803f0bb20acf8aa77fdb8c5dab4b2ec5b86fb",
       "workshopDependencies": [
         "2898033283",
         "2898069883",
@@ -19,11 +19,11 @@
     {
       "id": "hot-pot-house-colorblind-plus",
       "name": "Hot Pot House - Colorblind+ Compatibility",
-      "version": "1.7.3",
+      "version": "1.7.4",
       "folder": "HotPotHouseColorblindPlus",
       "fileName": "HotPotHouseColorblindPlus.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-colorblind-plus/dist/HotPotHouseColorblindPlus.dll",
-      "sha256": "55ab4207b985697e1c4776877367fc034a5d68045741f64ebcb06d77420af6e9",
+      "sha256": "cd8ac4fa49345850d711b85e7f0b5a55ce6248b7000285367049e1deab008dff",
       "workshopDependencies": [
         "2898033283",
         "2898069883",
