@@ -1,6 +1,10 @@
 # Hot Pot House Enhanced
 
-Version 2.4.21.
+Version 2.4.22.
+
+- Removes Enhanced's obsolete plate-stack TextMesh counter so CountUp compatibility is the sole count display, eliminating the small glyph artefact.
+
+- Replaces repeated appliance-wide label scans with a constant-time creation patch, preventing the hitch when HPH side dishes are picked up or placed.
 
 - Consolidates Hot Pot House side-dish labels into one appliance-level label on stacks, dishwashers and washbasins, for both clean and dirty dishes.
 

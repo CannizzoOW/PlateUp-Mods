@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.21",
+            "2.4.22",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.21 loaded; HPH side-dish labels are consolidated, or hidden when Colorblind+ supplies the label.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.22 loaded; side-dish labels use a constant-time creation patch and CountUp owns stack counts.");
     }
 }
 
@@ -129,8 +129,8 @@ internal static class UseVanillaProviderPrefabs
 
                 if (usePotRack)
                     HideVisualRenderers(replacement);
-                else if (usePlateStack)
-                    ConfigureNumericSideDishRack(replacement);
+                // CountUp compatibility owns the side-dish stock number. Do
+                // not add Enhanced's old TextMesh counter to the plate stack.
                 else if (!useCounter && !usePlateStack)
                     RemoveVanillaIngredientModels(replacement);
                 if (ingredientModel != null)
@@ -467,9 +467,24 @@ internal static class ConsolidateSideDishLabelsPatch
         return markerType == null ? null : AccessTools.Method(markerType, "Start");
     }
 
-    private static void Postfix(Component __instance)
+    private static bool Prefix(Component __instance)
     {
         if (__instance == null)
+            return true;
+        string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
+        if (!string.Equals(content, "Side Dish", StringComparison.OrdinalIgnoreCase) &&
+            !content.StartsWith("Dirty", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Skip HPH's NameTag.Create call entirely when Colorblind+ supplies
+        // the label. This preserves Colorblind+ text without briefly creating
+        // duplicate meshes or leaving a one-frame glyph artefact.
+        return !IsColorblindPlusLoaded();
+    }
+
+    private static void Postfix(Component __instance)
+    {
+        if (__instance == null || IsColorblindPlusLoaded())
             return;
         string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
         if (!string.Equals(content, "Side Dish", StringComparison.OrdinalIgnoreCase) &&
@@ -481,37 +496,21 @@ internal static class ConsolidateSideDishLabelsPatch
         if (appliance == null || nameTagType == null)
             return;
 
-        List<Component> labels = appliance.GetComponentsInChildren(nameTagType, true)
+        // ItemNameTag.Start creates exactly one NameTag below this item. Work
+        // only on that label and a direct appliance child, avoiding the old
+        // O(n²) hierarchy scan whenever dishes are picked up or placed.
+        Component newest = __instance.GetComponentsInChildren(nameTagType, true)
             .OfType<Component>()
-            .Where(label => label != null &&
-                            !(AccessTools.Field(nameTagType, "isOrderLabel")?.GetValue(label) as bool? ?? false))
-            .ToList();
-        if (labels.Count == 0)
+            .FirstOrDefault(label => label != null && IsSideDishText(label));
+        if (newest == null)
             return;
 
-        // Colorblind+ already supplies the useful item label. In that case,
-        // hide only Hot Pot House's own NameTag objects and leave the
-        // Colorblind+ / base-game ColourblindLabel untouched.
-        if (IsColorblindPlusLoaded())
-        {
-            foreach (Component label in labels)
-                if (IsSideDishText(label))
-                    label.gameObject.SetActive(false);
-            return;
-        }
-
-        Component consolidated = labels.FirstOrDefault(label =>
-            string.Equals(label.gameObject.name, ConsolidatedName, StringComparison.Ordinal));
-        Component newest = labels
-            .Where(label => !ReferenceEquals(label, consolidated) && IsSideDishText(label))
-            .OrderByDescending(label => label.transform.position.y)
-            .FirstOrDefault();
+        Transform existing = appliance.transform.Find(ConsolidatedName);
+        Component consolidated = existing == null ? null : existing.GetComponent(nameTagType);
 
         if (consolidated == null)
         {
             consolidated = newest;
-            if (consolidated == null)
-                return;
             consolidated.gameObject.name = ConsolidatedName;
             consolidated.transform.SetParent(appliance.transform, true);
         }
@@ -522,9 +521,8 @@ internal static class ConsolidateSideDishLabelsPatch
         }
 
         consolidated.gameObject.SetActive(true);
-        foreach (Component label in labels)
-            if (!ReferenceEquals(label, consolidated) && IsSideDishText(label))
-                label.gameObject.SetActive(false);
+        if (!ReferenceEquals(newest, consolidated))
+            newest.gameObject.SetActive(false);
     }
 
     private static bool IsSideDishText(Component label)
@@ -553,11 +551,12 @@ internal static class ConsolidateSideDishLabelsPatch
         AccessTools.Property(destinationText.GetType(), "text")?.SetValue(destinationText, text, null);
     }
 
+    private static readonly bool ColorblindPlusLoaded = AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
+        (assembly.GetName().Name ?? string.Empty).StartsWith("Colorblind", StringComparison.OrdinalIgnoreCase));
+
     private static bool IsColorblindPlusLoaded()
     {
-        return AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
-            (assembly.GetName().Name ?? string.Empty)
-                .StartsWith("Colorblind", StringComparison.OrdinalIgnoreCase));
+        return ColorblindPlusLoaded;
     }
 }
 

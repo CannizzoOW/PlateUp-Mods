@@ -4,11 +4,11 @@
     {
       "id": "hot-pot-house-enhanced",
       "name": "Hot Pot House Enhanced",
-      "version": "2.4.21",
+      "version": "2.4.22",
       "folder": "HotPotHouseEnhanced",
       "fileName": "HotPotHouseEnhanced.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-enhanced/dist/HotPotHouseEnhanced.dll",
-      "sha256": "3990532ecc8e10a9f7fb351a64b22537075c1a98b3327030c6ebae18602e5b75",
+      "sha256": "10d2171e4993e2136b499587cc9b57680de59d000ee510cef7fd68dab61a3964",
       "workshopDependencies": [
         "2898033283",
         "2898069883",
