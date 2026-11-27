@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.23",
+            "2.4.24",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.23 loaded; all native HPH labels are suppressed when Colorblind+ is present.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.24 loaded; duplicate shared-pot orders are collapsed by Enhanced.");
     }
 }
 
@@ -658,6 +658,49 @@ internal static class PrepareCompletedSharedPotViewsPatch
             item.IsSatisfiedBySharer = false;
             items[index] = item;
         }
+    }
+}
+
+[HarmonyPatch(typeof(ItemCollectionView), "UpdateData")]
+internal static class CollapseDuplicateSharedPotOrdersPatch
+{
+    private sealed class PotClaim
+    {
+        public ItemCollectionView Owner;
+        public ItemCollectionView.ItemData Order;
+    }
+
+    private static readonly List<PotClaim> Claims = new List<PotClaim>();
+
+    private static void Prefix(ItemCollectionView __instance, ref ItemCollectionView.ViewData view_data)
+    {
+        Claims.RemoveAll(claim => claim.Owner == null || ReferenceEquals(claim.Owner, __instance));
+        List<ItemCollectionView.ItemData> items = view_data.Items;
+        if (items == null || items.Count == 0)
+            return;
+
+        var filtered = new List<ItemCollectionView.ItemData>(items.Count);
+        foreach (ItemCollectionView.ItemData candidate in items)
+        {
+            if (!SharedPotIds.IsSharedFamilyPot(candidate.ItemID) || candidate.IsComplete)
+            {
+                filtered.Add(candidate);
+                continue;
+            }
+
+            bool alreadyDrawnForTable = Claims.Exists(claim =>
+                claim.Order.ItemID == candidate.ItemID &&
+                (claim.Order.TablePosition - candidate.TablePosition).sqrMagnitude < 0.01f &&
+                claim.Order.Components.IsEquivalent(candidate.Components, false));
+            if (alreadyDrawnForTable)
+                continue;
+
+            Claims.Add(new PotClaim { Owner = __instance, Order = candidate });
+            filtered.Add(candidate);
+        }
+
+        if (filtered.Count != items.Count)
+            view_data.Items = filtered;
     }
 }
 

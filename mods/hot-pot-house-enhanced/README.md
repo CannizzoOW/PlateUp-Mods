@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.23.
+Version 2.4.24.
+
+- Moves shared-pot order deduplication into Enhanced itself, so identical unfinished hot-pot orders at the same table display only one pot without requiring the Colorblind+ compatibility mod.
 
 - Suppresses all native Hot Pot House item, provider and order labels when the main Colorblind+ mod is installed. Colorblind+ labels and CountUp counters remain visible.
 
