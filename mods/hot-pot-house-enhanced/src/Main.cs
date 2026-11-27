@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.20",
+            "2.4.21",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.20 loaded; side-dish labels are consolidated per appliance and Colorblind+ dish labels are suppressed.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.21 loaded; HPH side-dish labels are consolidated, or hidden when Colorblind+ supplies the label.");
     }
 }
 
@@ -489,6 +489,17 @@ internal static class ConsolidateSideDishLabelsPatch
         if (labels.Count == 0)
             return;
 
+        // Colorblind+ already supplies the useful item label. In that case,
+        // hide only Hot Pot House's own NameTag objects and leave the
+        // Colorblind+ / base-game ColourblindLabel untouched.
+        if (IsColorblindPlusLoaded())
+        {
+            foreach (Component label in labels)
+                if (IsSideDishText(label))
+                    label.gameObject.SetActive(false);
+            return;
+        }
+
         Component consolidated = labels.FirstOrDefault(label =>
             string.Equals(label.gameObject.name, ConsolidatedName, StringComparison.Ordinal));
         Component newest = labels
@@ -541,50 +552,12 @@ internal static class ConsolidateSideDishLabelsPatch
         string text = AccessTools.Property(sourceText.GetType(), "text")?.GetValue(sourceText, null) as string;
         AccessTools.Property(destinationText.GetType(), "text")?.SetValue(destinationText, text, null);
     }
-}
-
-[HarmonyPatch(typeof(ItemGroupView), "PerformUpdate")]
-[HarmonyAfter("blargle.ColorblindPlus")]
-[HarmonyPriority(HarmonyLib.Priority.Last)]
-internal static class SuppressColorblindPlusSideDishLabelsPatch
-{
-    private static bool IsHotPotHouseSideDish(int itemId)
-    {
-        return itemId != 0 &&
-               (itemId == UseVanillaProviderPrefabs.CleanSideDishId ||
-                itemId == UseVanillaProviderPrefabs.DirtySideDishId);
-    }
 
     private static bool IsColorblindPlusLoaded()
     {
         return AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
             (assembly.GetName().Name ?? string.Empty)
                 .StartsWith("Colorblind", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static void Prefix(ItemGroupView __instance, int __0)
-    {
-        if (__instance != null && IsHotPotHouseSideDish(__0) && IsColorblindPlusLoaded())
-            __instance.ForceNoColourblind = true;
-    }
-
-    private static void Postfix(ItemGroupView __instance, int __0)
-    {
-        if (__instance == null || !IsHotPotHouseSideDish(__0) || !IsColorblindPlusLoaded())
-            return;
-
-        __instance.ForceNoColourblind = true;
-        Component colourblindLabel = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
-            ?.GetValue(__instance) as Component;
-        if (colourblindLabel != null)
-            colourblindLabel.gameObject.SetActive(false);
-
-        // Colorblind+ may create additional TMP labels beside PlateUp's own
-        // ColourblindLabel. These belong to this individual dish view; the
-        // single appliance-level HPH label and CountUp counter live elsewhere.
-        foreach (Component component in __instance.GetComponentsInChildren<Component>(true))
-            if (component != null && component.GetType().Namespace == "TMPro")
-                component.gameObject.SetActive(false);
     }
 }
 

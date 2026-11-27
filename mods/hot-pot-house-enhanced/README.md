@@ -1,10 +1,10 @@
 # Hot Pot House Enhanced
 
-Version 2.4.20.
+Version 2.4.21.
 
 - Consolidates Hot Pot House side-dish labels into one appliance-level label on stacks, dishwashers and washbasins, for both clean and dirty dishes.
 
-- When Colorblind+ is installed, suppresses its per-dish text for Hot Pot House side dishes without affecting the appliance-level HPH label or CountUp counters.
+- When Colorblind+ is installed, keeps its item text and suppresses Hot Pot House's duplicate side-dish text. CountUp counters are unaffected.
 
 - Strips label producers from the SoupsPlus Chicken Noodle Soup template itself, removing the remaining `ChiNo` label before guest bowls are cloned.
 
