@@ -6,13 +6,63 @@ using HarmonyLib;
 using Kitchen;
 using KitchenData;
 using KitchenLib;
+using KitchenLib.Customs;
 using KitchenLib.Event;
 using KitchenLib.Utils;
 using KitchenLib.References;
 using KitchenMods;
+using Unity.Entities;
 using UnityEngine;
 
 namespace HotPotHouseEnhanced;
+
+internal sealed class AutomaticPotWasher : CustomAppliance
+{
+    private static GameObject prefabHolder;
+    private GameObject prefab;
+    private Appliance SoakingSink => (Appliance)GDOUtils.GetExistingGDO(ApplianceReferences.SinkSoak);
+
+    public override string UniqueNameID => "automatic_pot_washer";
+    public override bool IsPurchasable => false;
+    public override PriceTier PriceTier => SoakingSink.PriceTier;
+    public override RarityTier RarityTier => SoakingSink.RarityTier;
+    public override ShoppingTags ShoppingTags => SoakingSink.ShoppingTags;
+    public override OccupancyLayer Layer => SoakingSink.Layer;
+    public override DecorationType ThemeRequired => SoakingSink.ThemeRequired;
+    public override bool IsNonInteractive => SoakingSink.IsNonInteractive;
+    public override List<IApplianceProperty> Properties => SoakingSink.Properties.ToList();
+    public override List<Appliance.ApplianceProcesses> Processes => SoakingSink.Processes.ToList();
+    public override List<Appliance> Upgrades => new List<Appliance>();
+    public override List<(Locale, ApplianceInfo)> InfoList => new List<(Locale, ApplianceInfo)>
+    {
+        ((Locale)1, LocalisationUtils.CreateApplianceInfo(
+            "Automatic Pot Washer",
+            "Automatically soaks dirty hot pots so grabbers can load and unload them.",
+            new List<Appliance.Section>(),
+            new List<string>()))
+    };
+
+    public override GameObject Prefab
+    {
+        get
+        {
+            if (prefab != null)
+                return prefab;
+            if (prefabHolder == null)
+            {
+                prefabHolder = new GameObject("Hot Pot House Enhanced Prefab Holder");
+                UnityEngine.Object.DontDestroyOnLoad(prefabHolder);
+                prefabHolder.SetActive(false);
+            }
+            prefab = UnityEngine.Object.Instantiate(SoakingSink.Prefab);
+            prefab.name = UniqueNameID;
+            prefab.transform.SetParent(prefabHolder.transform, false);
+            prefab.transform.localPosition = Vector3.zero;
+            prefab.transform.localRotation = Quaternion.identity;
+            return prefab;
+        }
+    }
+}
 
 public sealed class Main : BaseMod
 {
@@ -23,7 +73,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.24",
+            "2.5.0",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -31,8 +81,9 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
+        AddGameDataObject<AutomaticPotWasher>();
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.24 loaded; duplicate shared-pot orders are collapsed by Enhanced.");
+        Debug.Log("[Hot Pot House Enhanced] v2.5.0 loaded; Automatic Pot Washer upgrade registered.");
     }
 }
 
@@ -69,6 +120,8 @@ internal static class UseVanillaProviderPrefabs
         Appliance vanillaPotStack = data.Get<Appliance>(ApplianceReferences.PotStack);
         Appliance hotPotWasher = data.Get<Appliance>().FirstOrDefault(appliance =>
             appliance != null && appliance.name.EndsWith(" - pot_washer", StringComparison.OrdinalIgnoreCase));
+        Appliance automaticPotWasher = data.Get<Appliance>().FirstOrDefault(appliance =>
+            appliance != null && appliance.name.EndsWith(" - automatic_pot_washer", StringComparison.OrdinalIgnoreCase));
         Transform hotPotRackModel = hotPotWasher?.Prefab == null
             ? null
             : FindDescendant(hotPotWasher.Prefab.transform, "HPH Model");
@@ -80,6 +133,8 @@ internal static class UseVanillaProviderPrefabs
         }
         if (hotPotRackModel == null)
             Debug.LogWarning("[Hot Pot House Enhanced] The Hot Pot House pot-rack model was unavailable; Small Hot Pots will keep the counter fallback.");
+
+        ConfigureAutomaticPotWasher(hotPotWasher, automaticPotWasher, hotPotRackModel);
 
         int replaced = 0;
         foreach (Appliance gdo in data.Get<Appliance>())
@@ -175,6 +230,148 @@ internal static class UseVanillaProviderPrefabs
         Debug.Log($"[Hot Pot House Order Cleanup] Replaced {replaced} Hot Pot House provider prefabs during GameData build.");
         ReplaceMalaPickupModel(data);
         CacheCompletedSoupBowl(data);
+    }
+
+    private static void ConfigureAutomaticPotWasher(
+        Appliance manualWasher,
+        Appliance automaticWasher,
+        Transform rackModel)
+    {
+        if (manualWasher == null || automaticWasher?.Prefab == null)
+        {
+            Debug.LogWarning("[Hot Pot House Enhanced] Automatic Pot Washer upgrade could not be linked to the HPH Pot Washer.");
+            return;
+        }
+
+        if (!manualWasher.Upgrades.Contains(automaticWasher))
+            manualWasher.Upgrades.Add(automaticWasher);
+
+        ApplyAutomaticWasherSpeed(automaticWasher);
+
+        if (rackModel == null || automaticWasher.Prefab.transform.Find("HPH Automatic Pot Washer Visual") != null)
+            return;
+
+        // Keep the automatic soaking-sink base and its correctly controlled
+        // visual states. Only add the HPH rack and motor; cloning the entire
+        // manual prefab would leave all of its animation states visible.
+        GameObject visual = new GameObject("HPH Automatic Pot Washer Visual");
+        visual.transform.SetParent(automaticWasher.Prefab.transform, false);
+
+        GameObject rack = UnityEngine.Object.Instantiate(rackModel.gameObject);
+        rack.name = "HPH Automatic Pot Rack";
+        rack.transform.SetParent(visual.transform, false);
+        rack.transform.localPosition = rackModel.localPosition;
+        rack.transform.localRotation = rackModel.localRotation;
+        rack.transform.localScale = rackModel.localScale;
+
+        AddAutomaticWasherMotor(visual.transform, rack, manualWasher.Prefab);
+        Debug.Log("[Hot Pot House Enhanced] Automatic Pot Washer now matches the manual washer height and differs only by its motor while idle.");
+    }
+
+    private static void ApplyAutomaticWasherSpeed(Appliance automaticWasher)
+    {
+        Appliance originalSoakingSink = GDOUtils.GetExistingGDO(ApplianceReferences.SinkSoak) as Appliance;
+        Appliance.ApplianceProcesses originalClean = originalSoakingSink == null
+            ? default
+            : originalSoakingSink.Processes.FirstOrDefault(process =>
+                process.Process != null && process.Process.ID == ProcessReferences.Clean);
+        for (int index = 0; index < automaticWasher.Processes.Count; index++)
+        {
+            Appliance.ApplianceProcesses process = automaticWasher.Processes[index];
+            if (process.Process == null || process.Process.ID != ProcessReferences.Clean)
+                continue;
+            float baseSpeed = originalClean.Process == null ? process.Speed : originalClean.Speed;
+            process.Speed = baseSpeed * 1.15f;
+            automaticWasher.Processes[index] = process;
+            Debug.Log($"[Hot Pot House Enhanced] Automatic Pot Washer clean speed set to {process.Speed:0.###} (15% above its original soaking-sink speed).");
+        }
+    }
+
+    private static void AddAutomaticWasherMotor(Transform parent, GameObject washerModel, GameObject manualWasher)
+    {
+        Renderer templateRenderer = washerModel.GetComponentsInChildren<Renderer>(true).FirstOrDefault();
+        Material template = templateRenderer?.sharedMaterial;
+        Material housing = CreateTintedMaterial(template, new Color(0.86f, 0.82f, 0.72f, 1f));
+        Material panel = CreateTintedMaterial(template, new Color(0.16f, 0.27f, 0.42f, 1f));
+
+        Renderer[] manualRenderers = manualWasher.GetComponentsInChildren<Renderer>(true);
+        Bounds bounds = manualRenderers.Length == 0
+            ? new Bounds(new Vector3(0f, 0.4f, 0f), new Vector3(0.8f, 0.8f, 0.8f))
+            : GetCombinedBounds(manualRenderers);
+        Vector3 localMin = manualWasher.transform.InverseTransformPoint(bounds.min);
+        Vector3 localMax = manualWasher.transform.InverseTransformPoint(bounds.max);
+        float width = Mathf.Min(0.22f, (localMax.x - localMin.x) * 0.28f);
+        float height = Mathf.Min(0.28f, (localMax.y - localMin.y) * 0.45f);
+        float depth = Mathf.Min(0.18f, (localMax.z - localMin.z) * 0.25f);
+        Vector3 motorPosition = new Vector3(
+            localMax.x - width * 0.58f,
+            localMax.y - height * 0.55f,
+            localMax.z - depth * 0.58f);
+
+        CreateConceptCube(parent, "Motor Housing", motorPosition, new Vector3(width, height, depth), housing);
+        CreateConceptCube(parent, "Motor Vent", motorPosition + new Vector3(0f, 0f, depth * 0.53f), new Vector3(width * 0.68f, height * 0.58f, 0.018f), panel);
+    }
+
+    private static GameObject CreateConceptCube(Transform parent, string name, Vector3 position, Vector3 scale, Material material)
+    {
+        GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        part.name = name;
+        part.transform.SetParent(parent, false);
+        part.transform.localPosition = position;
+        part.transform.localRotation = Quaternion.identity;
+        part.transform.localScale = scale;
+        Component collider = part.GetComponent("BoxCollider");
+        if (collider != null)
+            UnityEngine.Object.DestroyImmediate(collider);
+        Renderer renderer = part.GetComponent<Renderer>();
+        if (renderer != null && material != null)
+            renderer.sharedMaterial = material;
+        return part;
+    }
+
+    private static Material CreateTintedMaterial(Material template, Color colour)
+    {
+        if (template == null)
+            return null;
+        Material material = new Material(template);
+        material.name = "HPH Automatic Pot Washer Material";
+        if (material.HasProperty("_Color"))
+            material.color = colour;
+        return material;
+    }
+
+    private static void FitRackToOneTile(GameObject rack, GameObject heightReference, GameObject tileReference)
+    {
+        Renderer[] rackRenderers = rack.GetComponentsInChildren<Renderer>(true);
+        Renderer[] heightRenderers = heightReference == null
+            ? Array.Empty<Renderer>()
+            : heightReference.GetComponentsInChildren<Renderer>(true);
+        Renderer[] tileRenderers = tileReference.GetComponentsInChildren<Renderer>(true)
+            .Where(renderer => !renderer.transform.IsChildOf(rack.transform))
+            .ToArray();
+        if (rackRenderers.Length == 0 || tileRenderers.Length == 0)
+            return;
+
+        Bounds rackBounds = GetCombinedBounds(rackRenderers);
+        Bounds tileBounds = GetCombinedBounds(tileRenderers);
+        float allowedWidth = Mathf.Min(0.9f, tileBounds.size.x * 0.92f);
+        float allowedDepth = Mathf.Min(0.9f, tileBounds.size.z * 0.92f);
+        float allowedHeight = heightRenderers.Length == 0
+            ? tileBounds.size.y
+            : GetCombinedBounds(heightRenderers).size.y;
+        float scale = Mathf.Min(
+            rackBounds.size.x <= 0.0001f ? 1f : allowedWidth / rackBounds.size.x,
+            rackBounds.size.z <= 0.0001f ? 1f : allowedDepth / rackBounds.size.z,
+            rackBounds.size.y <= 0.0001f ? 1f : allowedHeight / rackBounds.size.y);
+        rack.transform.localScale *= Mathf.Min(1f, scale);
+    }
+
+    private static Bounds GetCombinedBounds(Renderer[] renderers)
+    {
+        Bounds bounds = renderers[0].bounds;
+        for (int index = 1; index < renderers.Length; index++)
+            bounds.Encapsulate(renderers[index].bounds);
+        return bounds;
     }
 
     private static void ConfigureSideDishStorage(GameData data)

@@ -1,6 +1,10 @@
 # Hot Pot House Enhanced
 
-Version 2.4.24.
+Version 2.5.0.
+
+- Adds the Automatic Pot Washer as a Pot Washer upgrade. It automatically cleans dirty family pots, supports grabber input/output, and cleans 15% faster than the original soaking-sink baseline.
+
+- Removes the experimental table-persistent family-pot delivery lock. Hot Pot House's own shared-pot system remains responsible for normalising each active customer group's family-pot order, while Enhanced continues to collapse duplicate visuals.
 
 - Moves shared-pot order deduplication into Enhanced itself, so identical unfinished hot-pot orders at the same table display only one pot without requiring the Colorblind+ compatibility mod.
 
