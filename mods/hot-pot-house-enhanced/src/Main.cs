@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.22",
+            "2.4.23",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.22 loaded; side-dish labels use a constant-time creation patch and CountUp owns stack counts.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.23 loaded; all native HPH labels are suppressed when Colorblind+ is present.");
     }
 }
 
@@ -471,15 +471,13 @@ internal static class ConsolidateSideDishLabelsPatch
     {
         if (__instance == null)
             return true;
+        if (IsColorblindPlusLoaded())
+            return false;
         string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
         if (!string.Equals(content, "Side Dish", StringComparison.OrdinalIgnoreCase) &&
             !content.StartsWith("Dirty", StringComparison.OrdinalIgnoreCase))
             return true;
-
-        // Skip HPH's NameTag.Create call entirely when Colorblind+ supplies
-        // the label. This preserves Colorblind+ text without briefly creating
-        // duplicate meshes or leaving a one-frame glyph artefact.
-        return !IsColorblindPlusLoaded();
+        return true;
     }
 
     private static void Postfix(Component __instance)
@@ -557,6 +555,23 @@ internal static class ConsolidateSideDishLabelsPatch
     private static bool IsColorblindPlusLoaded()
     {
         return ColorblindPlusLoaded;
+    }
+
+    internal static bool ColorblindPlusInstalled => ColorblindPlusLoaded;
+}
+
+[HarmonyPatch]
+internal static class SuppressHotPotHouseOrderLabelsWithColorblindPlusPatch
+{
+    private static MethodBase TargetMethod()
+    {
+        Type nameTagType = AccessTools.TypeByName("HotPotHouse.NameTag");
+        return nameTagType == null ? null : AccessTools.Method(nameTagType, "ForOrder");
+    }
+
+    private static bool Prefix()
+    {
+        return !ConsolidateSideDishLabelsPatch.ColorblindPlusInstalled;
     }
 }
 

@@ -1,6 +1,8 @@
 # Hot Pot House Enhanced
 
-Version 2.4.22.
+Version 2.4.23.
+
+- Suppresses all native Hot Pot House item, provider and order labels when the main Colorblind+ mod is installed. Colorblind+ labels and CountUp counters remain visible.
 
 - Removes Enhanced's obsolete plate-stack TextMesh counter so CountUp compatibility is the sole count display, eliminating the small glyph artefact.
 
