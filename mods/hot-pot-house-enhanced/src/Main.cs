@@ -23,7 +23,7 @@ public sealed class Main : BaseMod
             ModId,
             "Hot Pot House Enhanced",
             "Cannizzo",
-            "2.4.18",
+            "2.4.20",
             ">=1.5.0",
             Assembly.GetExecutingAssembly())
     {
@@ -32,7 +32,7 @@ public sealed class Main : BaseMod
     protected override void OnPostActivate(Mod mod)
     {
         Events.BuildGameDataEvent += (_, args) => UseVanillaProviderPrefabs.Apply(args.gamedata);
-        Debug.Log("[Hot Pot House Enhanced] v2.4.18 loaded; SoupsPlus and HPH labels are stripped from guest bowls.");
+        Debug.Log("[Hot Pot House Enhanced] v2.4.20 loaded; side-dish labels are consolidated per appliance and Colorblind+ dish labels are suppressed.");
     }
 }
 
@@ -453,6 +453,138 @@ internal static class SideDishDishwasherLightsPatch
             // Reuse that colour while preserving the real Hot Pot House amount.
             __0.DisplayedType = ItemReferences.PlateDirty;
         }
+    }
+}
+
+[HarmonyPatch]
+internal static class ConsolidateSideDishLabelsPatch
+{
+    private const string ConsolidatedName = "HPH Enhanced Side Dish Label";
+
+    private static MethodBase TargetMethod()
+    {
+        Type markerType = AccessTools.TypeByName("HotPotHouse.ItemNameTag");
+        return markerType == null ? null : AccessTools.Method(markerType, "Start");
+    }
+
+    private static void Postfix(Component __instance)
+    {
+        if (__instance == null)
+            return;
+        string content = AccessTools.Field(__instance.GetType(), "Content")?.GetValue(__instance) as string ?? string.Empty;
+        if (!string.Equals(content, "Side Dish", StringComparison.OrdinalIgnoreCase) &&
+            !content.StartsWith("Dirty", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        ApplianceView appliance = __instance.GetComponentInParent<ApplianceView>();
+        Type nameTagType = AccessTools.TypeByName("HotPotHouse.NameTag");
+        if (appliance == null || nameTagType == null)
+            return;
+
+        List<Component> labels = appliance.GetComponentsInChildren(nameTagType, true)
+            .OfType<Component>()
+            .Where(label => label != null &&
+                            !(AccessTools.Field(nameTagType, "isOrderLabel")?.GetValue(label) as bool? ?? false))
+            .ToList();
+        if (labels.Count == 0)
+            return;
+
+        Component consolidated = labels.FirstOrDefault(label =>
+            string.Equals(label.gameObject.name, ConsolidatedName, StringComparison.Ordinal));
+        Component newest = labels
+            .Where(label => !ReferenceEquals(label, consolidated) && IsSideDishText(label))
+            .OrderByDescending(label => label.transform.position.y)
+            .FirstOrDefault();
+
+        if (consolidated == null)
+        {
+            consolidated = newest;
+            if (consolidated == null)
+                return;
+            consolidated.gameObject.name = ConsolidatedName;
+            consolidated.transform.SetParent(appliance.transform, true);
+        }
+        else if (newest != null)
+        {
+            CopyText(newest, consolidated);
+            consolidated.transform.position = newest.transform.position;
+        }
+
+        consolidated.gameObject.SetActive(true);
+        foreach (Component label in labels)
+            if (!ReferenceEquals(label, consolidated) && IsSideDishText(label))
+                label.gameObject.SetActive(false);
+    }
+
+    private static bool IsSideDishText(Component label)
+    {
+        string text = AccessTools.Property(label.GetType(), "text")?.GetValue(label, null) as string;
+        if (string.IsNullOrEmpty(text))
+        {
+            Component tmp = label.GetComponents<Component>()
+                .FirstOrDefault(component => component != null && component.GetType().Namespace == "TMPro");
+            text = tmp == null ? string.Empty :
+                AccessTools.Property(tmp.GetType(), "text")?.GetValue(tmp, null) as string ?? string.Empty;
+        }
+        return text.IndexOf("Side Dish", StringComparison.OrdinalIgnoreCase) >= 0 ||
+               text.StartsWith("Dirty", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void CopyText(Component source, Component destination)
+    {
+        Component sourceText = source.GetComponents<Component>()
+            .FirstOrDefault(component => component != null && component.GetType().Namespace == "TMPro");
+        Component destinationText = destination.GetComponents<Component>()
+            .FirstOrDefault(component => component != null && component.GetType().Namespace == "TMPro");
+        if (sourceText == null || destinationText == null)
+            return;
+        string text = AccessTools.Property(sourceText.GetType(), "text")?.GetValue(sourceText, null) as string;
+        AccessTools.Property(destinationText.GetType(), "text")?.SetValue(destinationText, text, null);
+    }
+}
+
+[HarmonyPatch(typeof(ItemGroupView), "PerformUpdate")]
+[HarmonyAfter("blargle.ColorblindPlus")]
+[HarmonyPriority(HarmonyLib.Priority.Last)]
+internal static class SuppressColorblindPlusSideDishLabelsPatch
+{
+    private static bool IsHotPotHouseSideDish(int itemId)
+    {
+        return itemId != 0 &&
+               (itemId == UseVanillaProviderPrefabs.CleanSideDishId ||
+                itemId == UseVanillaProviderPrefabs.DirtySideDishId);
+    }
+
+    private static bool IsColorblindPlusLoaded()
+    {
+        return AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
+            (assembly.GetName().Name ?? string.Empty)
+                .StartsWith("Colorblind", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void Prefix(ItemGroupView __instance, int __0)
+    {
+        if (__instance != null && IsHotPotHouseSideDish(__0) && IsColorblindPlusLoaded())
+            __instance.ForceNoColourblind = true;
+    }
+
+    private static void Postfix(ItemGroupView __instance, int __0)
+    {
+        if (__instance == null || !IsHotPotHouseSideDish(__0) || !IsColorblindPlusLoaded())
+            return;
+
+        __instance.ForceNoColourblind = true;
+        Component colourblindLabel = AccessTools.Field(typeof(ItemGroupView), "ColourblindLabel")
+            ?.GetValue(__instance) as Component;
+        if (colourblindLabel != null)
+            colourblindLabel.gameObject.SetActive(false);
+
+        // Colorblind+ may create additional TMP labels beside PlateUp's own
+        // ColourblindLabel. These belong to this individual dish view; the
+        // single appliance-level HPH label and CountUp counter live elsewhere.
+        foreach (Component component in __instance.GetComponentsInChildren<Component>(true))
+            if (component != null && component.GetType().Namespace == "TMPro")
+                component.gameObject.SetActive(false);
     }
 }
 
