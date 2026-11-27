@@ -1,6 +1,10 @@
 # Hot Pot House - Colorblind+ Compatibility
 
-Version 1.8.5.
+Version 1.8.6.
+
+Dirty accessibility text is now suppressed through PlateUp's own
+`ItemGroupView.ForceNoColourblind` before `PerformUpdate` constructs the label.
+The temporary post-update Dirty watcher has been removed.
 
 Dirty base-game ItemGroupView labels receive a short reactivation guard after
 updates, preventing Colorblind+ styled `Dirty` text from being restored later.

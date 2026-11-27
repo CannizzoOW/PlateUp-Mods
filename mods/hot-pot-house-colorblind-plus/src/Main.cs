@@ -38,7 +38,7 @@ public sealed class Main : BaseMod
         ModId,
         "Hot Pot House - Colorblind+ Compatibility",
         "Cannizzo",
-        "1.8.5",
+        "1.8.6",
         ">=1.5.0",
         Assembly.GetExecutingAssembly())
     {
@@ -97,7 +97,7 @@ public sealed class Main : BaseMod
 
     protected override void OnPostActivate(Mod mod)
     {
-        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.5 loaded with dirty-label reactivation guards.");
+        Debug.Log("[Hot Pot House - Colorblind+ Compatibility] v1.8.6 loaded with base-game ForceNoColourblind dirty suppression.");
     }
 
     private static void OnHotPotHousePreferenceChanged(bool value)
@@ -409,6 +409,18 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
     private static readonly Dictionary<ItemGroupView, HashSet<GameObject>> HiddenTextObjects = new Dictionary<ItemGroupView, HashSet<GameObject>>();
     private static readonly Dictionary<ItemGroupView, bool> OriginalForceNoColourblind = new Dictionary<ItemGroupView, bool>();
 
+    private static void Prefix(ItemGroupView __instance, int __0)
+    {
+        if (__instance == null || !Main.Hide(Main.HideColorblindDirtySideDishLabel) || !Main.IsDirtyItem(__0))
+            return;
+        if (!OriginalForceNoColourblind.ContainsKey(__instance))
+            OriginalForceNoColourblind[__instance] = __instance.ForceNoColourblind;
+        // PlateUp's own PerformUpdate reads this field before constructing the
+        // accessibility ColourblindLabel. Setting it in Prefix prevents the
+        // base-game Dirty text from being rendered at all.
+        __instance.ForceNoColourblind = true;
+    }
+
     private static void Postfix(ItemGroupView __instance, int __0)
     {
         if (__instance == null)
@@ -435,8 +447,6 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
 
         if (hide)
         {
-            if (dirtyItem && Main.Hide(Main.HideColorblindDirtySideDishLabel))
-                GuardDirtyText(instance);
             if (!OriginalForceNoColourblind.ContainsKey(instance))
                 OriginalForceNoColourblind[instance] = instance.ForceNoColourblind;
             instance.ForceNoColourblind = true;
@@ -492,42 +502,6 @@ internal static class ConfigureColorblindPlusItemLabelsPatch
         }
     }
 
-    private static void GuardDirtyText(ItemGroupView instance)
-    {
-        DirtyItemTextWatcher watcher = instance.GetComponent<DirtyItemTextWatcher>() ??
-                                       instance.gameObject.AddComponent<DirtyItemTextWatcher>();
-        watcher.RemainingFrames = 4;
-        watcher.enabled = true;
-    }
-
-    internal static void HideDirtyText(GameObject root)
-    {
-        if (root == null)
-            return;
-        foreach (Component component in root.GetComponentsInChildren<Component>(true))
-        {
-            if (component == null || component.GetType().Namespace != "TMPro")
-                continue;
-            string text = AccessTools.Property(component.GetType(), "text")?.GetValue(component, null) as string ?? string.Empty;
-            if (text.IndexOf("Dirty", StringComparison.OrdinalIgnoreCase) >= 0)
-                component.gameObject.SetActive(false);
-        }
-    }
-}
-
-internal sealed class DirtyItemTextWatcher : MonoBehaviour
-{
-    internal int RemainingFrames;
-
-    private void LateUpdate()
-    {
-        if (!Main.Hide(Main.HideColorblindDirtySideDishLabel) || RemainingFrames-- <= 0)
-        {
-            enabled = false;
-            return;
-        }
-        ConfigureColorblindPlusItemLabelsPatch.HideDirtyText(gameObject);
-    }
 }
 
 [HarmonyPatch]
