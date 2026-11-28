@@ -37,7 +37,7 @@ internal static class Program
 
 internal sealed class MainForm : Form
 {
-    private const string AppVersion = "1.2.0";
+    private const string AppVersion = "2.0.0";
     private const string ManifestUrl = "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods.json";
     private const string MarkerName = "CannizzoModPatcher.install.json";
     private const string LegacyMarkerName = "CannizzoModPatcher.install.txt";
@@ -74,7 +74,7 @@ internal sealed class MainForm : Form
     public MainForm()
     {
         Text = $"Cannizzo ModPatcher {AppVersion}";
-        ClientSize = new Size(880, 860);
+        ClientSize = new Size(880, 900);
         MinimumSize = new Size(720, 560);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = true;
@@ -274,6 +274,7 @@ internal sealed class MainForm : Form
         string gameStyle = gameRunning ? "background:#4b5260" : "background:#287a5b";
         string gameDisabled = gameRunning ? "disabled" : "";
         string html = template
+            .Replace("html{height:100%;overflow-y:auto;", "html{height:100%;overflow:hidden;")
             .Replace("Install and update verified PlateUp mods from GitHub", "Manage local PlateUp mod fixes, compatibility patches, and tools")
             .Replace("<button class=\"btn\" onclick=\"send('refresh')\">Check now</button>",
                 $"<button class=\"btn\" onclick=\"send('refresh')\">Check now</button><button class=\"btn\" onclick=\"send('update-all')\">Update all</button><button class=\"btn\" onclick=\"send('repair')\">Repair selected</button><button class=\"btn\" onclick=\"send('rollback')\">Roll back selected</button><button class=\"btn\" onclick=\"send('open-folder')\">Open Mods folder</button><button class=\"btn\" style=\"{gameStyle}\" {gameDisabled} onclick=\"send('launch-game')\">{gameLabel}</button>")

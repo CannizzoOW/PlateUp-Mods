@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "launcher": {
-    "version": "1.2.0",
+    "version": "2.0.0",
     "releaseUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/latest",
-    "downloadUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/download/v1.2.0/Cannizzo.ModPatcher.exe",
-    "sha256": "61c84e695e9b2dec821e0d8fa1b3b9e5fbd5d34d1dbf8270fd7283d13af64da8",
+    "downloadUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/download/v2.0.0/Cannizzo.ModPatcher.exe",
+    "sha256": "6c53cdf51aa6f59bc960b5133dc83f9bdb1cf893a3ecba6b0d69accd31e37df0",
     "minimumSupportedVersion": "1.1.0",
-    "releaseNotes": "Adds verified self-update, Update All, repair, backup and rollback, dependency checks, mod details, game status and a self-contained .NET 8 build."
+    "releaseNotes": "Major launcher redesign with verified self-update, Update All, repair, backup and rollback, dependency checks, mod details, game status and a self-contained .NET 8 build."
   },
   "mods": [
     {
