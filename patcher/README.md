@@ -1,6 +1,6 @@
 # Cannizzo ModPatcher
 
-Current release: 2.0.1.
+Current release: 2.0.
 
 GitHub-backed local installer while Workshop releases await moderation.
 

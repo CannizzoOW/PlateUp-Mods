@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "launcher": {
-    "version": "2.0.1",
+    "version": "2.0",
     "releaseUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/latest",
-    "downloadUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/download/v2.0.1/Cannizzo.ModPatcher.exe",
-    "sha256": "86a7fd4c7e6c95e07dcf0ce6d5344185dca3c44e62843d70ddf4de2db209317a",
+    "downloadUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/download/v2.0/Cannizzo.ModPatcher.exe",
+    "sha256": "31628d76716954ed21d268665fc1d833c05304ed7ff0d2559c439c1f4ff8b4ea",
     "minimumSupportedVersion": "1.1.0",
-    "releaseNotes": "Dependency lists now use readable Workshop mod names instead of numeric IDs."
+    "releaseNotes": "Major dark-UI redesign with verified self-update, recovery tools, dependency aliases, live game status and a self-contained .NET 8 build."
   },
   "mods": [
     {

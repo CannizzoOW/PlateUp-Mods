@@ -37,7 +37,7 @@ internal static class Program
 
 internal sealed class MainForm : Form
 {
-    private const string AppVersion = "2.0.1";
+    private const string AppVersion = "2.0";
     private static readonly IReadOnlyDictionary<string, string> DependencyAliases = new Dictionary<string, string>
     {
         ["2898033283"] = "HarmonyX",
