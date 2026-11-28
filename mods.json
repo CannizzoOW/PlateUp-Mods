@@ -4,7 +4,7 @@
     "version": "2.0",
     "releaseUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/latest",
     "downloadUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/download/v2.0/Cannizzo.ModPatcher.exe",
-    "sha256": "31628d76716954ed21d268665fc1d833c05304ed7ff0d2559c439c1f4ff8b4ea",
+    "sha256": "4b3651cafa0ba6b4047f4f96aed1450fa0971bece5f6099ee7d9f65e0eaec17e",
     "minimumSupportedVersion": "1.1.0",
     "releaseNotes": "Major dark-UI redesign with verified self-update, recovery tools, dependency aliases, live game status and a self-contained .NET 8 build."
   },

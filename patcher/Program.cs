@@ -659,6 +659,8 @@ internal sealed class MainForm : Form
 
     private async Task SelfUpdateAsync()
     {
+        // Revalidate immediately so a stale GitHub Raw response cannot leave the button pointing at a removed release.
+        await LoadManifestAsync(true);
         LauncherDefinition? update = manifest?.Launcher;
         if (update == null || !IsNewer(update.Version, AppVersion)) { Log("The launcher is already up to date."); return; }
         if (string.IsNullOrWhiteSpace(update.DownloadUrl) || !Regex.IsMatch(update.Sha256 ?? "", "^[0-9a-fA-F]{64}$"))
@@ -682,6 +684,11 @@ internal sealed class MainForm : Form
             Process.Start(new ProcessStartInfo(temporary,
                 $"--apply-update \"{Application.ExecutablePath}\" {Environment.ProcessId}") { UseShellExecute = true });
             Close();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            Log("The cached update asset no longer exists. Opening the latest release instead.");
+            OpenLauncherDownload();
         }
         catch (Exception ex) { ShowError("Could not update the launcher: " + ex.Message); }
     }
