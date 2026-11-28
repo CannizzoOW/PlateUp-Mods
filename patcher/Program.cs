@@ -37,7 +37,17 @@ internal static class Program
 
 internal sealed class MainForm : Form
 {
-    private const string AppVersion = "2.0.0";
+    private const string AppVersion = "2.0.1";
+    private static readonly IReadOnlyDictionary<string, string> DependencyAliases = new Dictionary<string, string>
+    {
+        ["2898033283"] = "HarmonyX",
+        ["2898069883"] = "KitchenLib",
+        ["2929164692"] = "Soups Plus",
+        ["3810492290"] = "Hot Pot House",
+        ["2927654156"] = "CountUp!",
+        ["2949018507"] = "PreferenceSystem",
+        ["3306089551"] = "PlatePatch"
+    };
     private const string ManifestUrl = "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods.json";
     private const string MarkerName = "CannizzoModPatcher.install.json";
     private const string LegacyMarkerName = "CannizzoModPatcher.install.txt";
@@ -295,7 +305,8 @@ internal sealed class MainForm : Form
                 bool installed = PlateUpLocator.IsWorkshopItemInstalled(id);
                 string color = installed ? "#63d7a1" : "#ff8ea0";
                 string state = installed ? "installed" : "missing";
-                return $"<a href=\"https://steamcommunity.com/sharedfiles/filedetails/?id={H(id)}\" style=\"color:{color};margin-right:12px\">{H(id)} ({state})</a>";
+                string alias = DependencyAliases.TryGetValue(id, out string? name) ? name : $"Workshop item {id}";
+                return $"<a href=\"https://steamcommunity.com/sharedfiles/filedetails/?id={H(id)}\" title=\"Workshop ID {H(id)}\" style=\"color:{color};margin-right:12px\">{H(alias)} ({state})</a>";
             }));
         string description = string.IsNullOrWhiteSpace(mod.Description) ? "Locally managed PlateUp mod." : H(mod.Description);
         string changelog = string.IsNullOrWhiteSpace(mod.Changelog) ? "No release notes supplied." : H(mod.Changelog);
