@@ -1,10 +1,20 @@
 {
   "schemaVersion": 1,
+  "launcher": {
+    "version": "1.2.0",
+    "releaseUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/latest",
+    "downloadUrl": "https://github.com/CannizzoOW/PlateUp-Mods/releases/download/v1.2.0/Cannizzo.ModPatcher.exe",
+    "sha256": "61c84e695e9b2dec821e0d8fa1b3b9e5fbd5d34d1dbf8270fd7283d13af64da8",
+    "minimumSupportedVersion": "1.1.0",
+    "releaseNotes": "Adds verified self-update, Update All, repair, backup and rollback, dependency checks, mod details, game status and a self-contained .NET 8 build."
+  },
   "mods": [
     {
       "id": "hot-pot-house-enhanced",
       "name": "Hot Pot House Enhanced",
       "version": "2.5.0",
+      "description": "Modernizes and repairs Hot Pot House assets, providers, serving behaviour and appliance interactions.",
+      "changelog": "Improved family-pot handling, provider visuals, dish stacks and automatic pot washing support.",
       "folder": "HotPotHouseEnhanced",
       "fileName": "HotPotHouseEnhanced.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-enhanced/dist/HotPotHouseEnhanced.dll",
@@ -20,6 +30,8 @@
       "id": "hot-pot-house-countup-compat",
       "name": "Hot Pot House - CountUp! Compatibility",
       "version": "1.0.0",
+      "description": "Adds CountUp! stock counters for Hot Pot House dish and pot stacks.",
+      "changelog": "Initial compatibility release.",
       "folder": "HotPotHouseCountUpCompat",
       "fileName": "HotPotHouseCountUpCompat.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/hot-pot-house-countup-compat/dist/HotPotHouseCountUpCompat.dll",
@@ -37,6 +49,8 @@
       "id": "more-upgrades",
       "name": "More Upgrades",
       "version": "2.1.0",
+      "description": "Adds configurable upgrade cycles and additional appliance upgrade paths.",
+      "changelog": "Improved preference labels and clarified which upgrade cycles each setting controls.",
       "folder": "MoreUpgrades",
       "fileName": "MoreUpgrades.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/more-upgrades/dist/MoreUpgrades.dll",
@@ -51,6 +65,8 @@
       "id": "restart-day-soft-opening",
       "name": "Restart Day - Soft Opening",
       "version": "1.0.0",
+      "description": "Adds a safe restart-day workflow for Soft Opening runs.",
+      "changelog": "Initial release.",
       "folder": "CannizzoRestartDay",
       "fileName": "CannizzoRestartDay.dll",
       "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/restart-day-soft-opening/dist/CannizzoRestartDay.dll",
