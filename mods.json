@@ -32,6 +32,33 @@
         "3306089551",
         "3810492290"
       ]
+    },
+    {
+      "id": "more-upgrades",
+      "name": "More Upgrades",
+      "version": "2.1.0",
+      "folder": "MoreUpgrades",
+      "fileName": "MoreUpgrades.dll",
+      "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/more-upgrades/dist/MoreUpgrades.dll",
+      "sha256": "ace99129d96fdf4b3ab4ba0043b2f203816282a704330198453d87027ba7310f",
+      "workshopDependencies": [
+        "2898033283",
+        "2898069883",
+        "2949018507"
+      ]
+    },
+    {
+      "id": "restart-day-soft-opening",
+      "name": "Restart Day - Soft Opening",
+      "version": "1.0.0",
+      "folder": "CannizzoRestartDay",
+      "fileName": "CannizzoRestartDay.dll",
+      "downloadUrl": "https://raw.githubusercontent.com/CannizzoOW/PlateUp-Mods/main/mods/restart-day-soft-opening/dist/CannizzoRestartDay.dll",
+      "sha256": "c3d25e43978e1030ad25f1b5ef9dcc7770de1d1212114cdbe8240e1c6260a44f",
+      "workshopDependencies": [
+        "2898033283",
+        "2898069883"
+      ]
     }
   ]
 }

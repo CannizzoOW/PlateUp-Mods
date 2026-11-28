@@ -10,6 +10,22 @@ Visual and gameplay-presentation fixes for Hot Pot House, including improved pro
 
 Required Workshop items: HarmonyX, KitchenLib, Soups Plus, and Hot Pot House.
 
+### Hot Pot House - CountUp! Compatibility
+
+Lets CountUp! display the remaining number of Hot Pot House side dishes without duplicate labels or counters.
+
+### More Upgrades
+
+A current rebuild of the deprecated More Upgrades mod. Adds configurable research cycles for hobs, counters, tables, mops, combiners, portioners, footwear, and player tools. Version 2.1.0 labels every option with the affected appliances and cycle order.
+
+Required Workshop items: HarmonyX, KitchenLib, and PreferenceSystem.
+
+### Restart Day - Soft Opening
+
+Adds a host-only Restart Day option to the pause menu during an active day, with a confirmation screen before current-day progress is discarded.
+
+Required Workshop items: HarmonyX and KitchenLib.
+
 ## Installer integration
 
 [`mods.json`](mods.json) is the update manifest used by Cannizzo ModPatcher. Published DLLs are stored in each mod's `dist` directory and protected by SHA-256 checksums in the manifest.
