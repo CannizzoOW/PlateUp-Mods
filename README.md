@@ -36,4 +36,6 @@ These mods do not redistribute Hot Pot House, CountUp!, Soups Plus, KitchenLib, 
 
 Cannizzo ModPatcher finds PlateUp from Steam even when no `Mods` directory exists, creates it when needed, and retrieves the current mod catalog and verified DLLs from this repository. Its source is available in [`patcher`](patcher/).
 
+![Cannizzo ModPatcher 2.0 interface](patcher/assets/modpatcher-ui-preview.png)
+
 Download the ready-to-run Windows build from the [latest release](https://github.com/CannizzoOW/PlateUp-Mods/releases/latest).
